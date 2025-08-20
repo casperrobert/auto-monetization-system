@@ -8,6 +8,22 @@
     "dev": "node index.js"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "@tensorflow/tfjs": "^4.22.0",
+    "axios": "^1.11.0",
+    "backendless": "^7.4.7",
+    "cron": "^4.3.3",
+    "dotenv": "^17.2.1",
+    "express": "^4.21.2",
+    "ioredis": "^5.7.0",
+    "jsonwebtoken": "^9.0.2",
+    "kafkajs": "^2.2.4",
+    "uuid": "^11.1.0",
+    "web3": "^4.16.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.3.0",
+    "typescript": "^5.9.2"
   }
 }

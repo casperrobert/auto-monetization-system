@@ -1,2 +1,12 @@
 # Local Netlify folder
 .netlify
+node_modules
+
+# CASPER baseline
+.env
+.venv/
+node_modules/
+.server.log
+*.log
+public/.env
+.DS_Store

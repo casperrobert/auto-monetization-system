@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animationstest · CASPER</title>
+<style>
+  :root{--bg:#0b0c10;--text:#e8eaf1;--brand:#4da3ff;--brand2:#64fbd2}
+  *{box-sizing:border-box} body{margin:0;font:16px/1.5 system-ui;background:var(--bg);color:var(--text)}
+  header{padding:14px 18px;background:#0008;backdrop-filter:blur(6px);position:sticky;top:0}
+  h1{margin:0;font-size:20px}
+  .wrap{width:min(1100px,94%);margin:30px auto}
+  /* Spinner */
+  .spinner{width:42px;height:42px;border:4px solid #ffffff33;border-top-color:var(--brand);border-radius:50%;
+           animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(1turn)}}
+  /* Bouncing Ball */
+  .stage{position:relative;height:160px;border:1px solid #ffffff22;border-radius:12px;margin-top:18px;overflow:hidden}
+  .ball{position:absolute;left:0;top:40px;width:30px;height:30px;border-radius:50%;
+        background:linear-gradient(135deg,var(--brand),var(--brand2));box-shadow:0 8px 24px #0008}
+  .clock{margin-top:18px;opacity:.8}
+  .btn{display:inline-block;margin-top:16px;padding:10px 14px;border-radius:10px;border:1px solid #ffffff22;
+       text-decoration:none;color:var(--text)}
+  .btn:hover{border-color:#ffffff55}
+</style>
+</head>
+<body>
+<header><h1>Animationstest</h1></header>
+<div class="wrap">
+  <p>Wenn du **Bewegung** siehst (Spinner, hüpfender Ball & laufende Uhr), dann läuft dein Frontend korrekt. ✅</p>
+
+  <div class="spinner" aria-label="Ladespinner"></div>
+
+  <div class="stage" id="stage" aria-label="Bühne">
+    <div class="ball" id="ball"></div>
+  </div>
+
+  <div class="clock" id="clock">Zeit: –</div>
+
+  <a class="btn" href="dashboard.html">Zum Dashboard</a>
+</div>
+
+<script>
+  // Uhr aktualisieren
+  const clock = document.getElementById('clock');
+  setInterval(()=>{clock.textContent='Zeit: ' + new Date().toLocaleTimeString();}, 500);
+
+  // Ball animieren (requestAnimationFrame)
+  const ball = document.getElementById('ball');
+  const stage = document.getElementById('stage');
+  let x=0, y=40, vx=2.6, vy=0, g=0.35;
+  function tick(){
+    const w = stage.clientWidth, h = stage.clientHeight;
+    x += vx; vy += g; y += vy;
+    // Wände
+    if(x<0){x=0; vx*=-0.98}
+    if(x> w-30){x=w-30; vx*=-0.98}
+    // Boden/Decke
+    if(y> h-30){y=h-30; vy*=-0.88}
+    if(y<0){y=0; vy*=-0.88}
+    ball.style.transform = `translate(${x}px, ${y}px)`;
+    requestAnimationFrame(tick);
+  }
+  tick();
+  // Konsole-Ping – damit du im DevTools-Log Aktivität siehst
+  setInterval(()=>console.log('tick', Date.now()), 1000);
+</script>
+</body>
+</html>
