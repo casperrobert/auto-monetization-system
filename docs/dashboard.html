@@ -29,7 +29,7 @@ cat > public/dashboard.html <<'HTML'
       <section class="panel">
         <h2>1) Einstellungen</h2>
         <form class="cfg">
-          <label>Affiliate-Tag (Amazon)<input id="cfg-aff" placeholder="dein-tag-21"></label>
+          <label>Affiliate-Tag (zon)<input id="cfg-aff" placeholder="dein-tag-21"></label>
           <label>Backendless APP_ID<input id="cfg-app" placeholder="APP_ID"></label>
           <label>Backendless API_KEY<input id="cfg-key" placeholder="REST_API_KEY"></label>
           <label>Log-Tabelle<input id="cfg-table" value="Transactions"></label>
@@ -42,7 +42,7 @@ cat > public/dashboard.html <<'HTML'
 
       <section class="panel">
         <h2>2) Wallet verbinden</h2>
-        <button id="btn-connect" class="btn btn-primary">Mit MetaMask verbinden</button>
+        <button id="btn-connect" class="btn btn-primary">Mit Metsk verbinden</button>
         <div id="wallet-info" class="tiny muted"></div>
         <div class="row">
           <label>Betrag (ETH)<input id="send-amount" type="number" step="0.0001" placeholder="0.01"></label>
@@ -66,7 +66,7 @@ cat > public/dashboard.html <<'HTML'
 
       <section class="panel">
         <h2>4) Affiliate-Link Generator</h2>
-        <label>Amazon-Produkt-URL<input id="aff-url" placeholder="https://www.amazon.de/dp/ASIN…"></label>
+        <label>zon-Produkt-URL<input id="aff-url" placeholder="https://www.zon.de/dp/ASIN…"></label>
         <button id="btn-build" class="btn">Link erzeugen</button>
         <input id="aff-out" readonly placeholder="Ergebnis erscheint hier">
       </section>
@@ -75,7 +75,7 @@ cat > public/dashboard.html <<'HTML'
         <h2>5) Einnahmen-Log</h2>
         <div class="row">
           <label>Betrag<input id="log-amount" type="number" step="0.01" placeholder="5.00"></label>
-          <label>Quelle<input id="log-source" placeholder="Amazon / Shoop / Crypto"></label>
+          <label>Quelle<input id="log-source" placeholder="zon / Shoop / Crypto"></label>
           <button id="btn-log" class="btn">Speichern</button>
         </div>
         <table class="table" id="log-table">
@@ -129,7 +129,7 @@ cat > public/js/dashboard.js <<'JS'
   const out = (m)=>{ const el=$('#tx-out'); if(el) el.textContent=(el.textContent+'\n'+m).trim(); };
   $('#btn-connect')?.addEventListener('click', async()=>{
     try{
-      if(!window.ethereum){ alert('MetaMask nicht gefunden'); return; }
+      if(!window.ethereum){ alert('Metsk nicht gefunden'); return; }
       await window.ethereum.request({method:'eth_requestAccounts'});
       web3 = new Web3(window.ethereum);
       const [acc] = await web3.eth.getAccounts();
@@ -176,7 +176,7 @@ cat > public/js/dashboard.js <<'JS'
     if(!cfg.affTag) return alert('Affiliate-Tag in den Einstellungen speichern');
     try{
       const u=new URL(url);
-      if(!u.hostname.includes('amazon.')) return alert('Keine Amazon-URL');
+      if(!u.hostname.includes('zon.')) return alert('Keine zon-URL');
       u.searchParams.set('tag', cfg.affTag);
       $('#aff-out').value = u.toString();
     }catch{ alert('Ungültige URL'); }

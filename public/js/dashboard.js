@@ -1,23 +1,23 @@
-(async function () {
-  const $ = (s) => document.querySelector(s);
-  const out = $('#out');
-  const health = $('#health');
-  const btnExec = $('#btn-exec');
-  const btnHealth = $('#btn-health');
+(async function(){
+  const execBtn=document.getElementById('btn-exec');
+  const healthBtn=document.getElementById('btn-health');
+  const out=document.getElementById('out');
+  const health=document.getElementById('health');
 
-  btnExec?.addEventListener('click', async () => {
-    const old = btnExec.textContent; btnExec.disabled = true; btnExec.textContent = 'Läuft…';
-    try {
-      const res = await fetch('/api/quantum/execute', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ demo: true }) });
-      out.textContent = JSON.stringify(await res.json(), null, 2);
-    } catch (e) { out.textContent = 'Fehler: ' + e; }
-    finally { btnExec.disabled = false; btnExec.textContent = old; }
+  execBtn?.addEventListener('click', async ()=>{
+    execBtn.disabled=true; const old=execBtn.textContent; execBtn.textContent='Läuft…';
+    out.textContent='';
+    try{
+      const r=await fetch('/api/quantum/execute',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+      out.textContent=JSON.stringify(await r.json(),null,2);
+    }catch(e){ out.textContent='Fehler: '+e; } finally{ execBtn.disabled=false; execBtn.textContent=old; }
   });
 
-  btnHealth?.addEventListener('click', async () => {
-    try {
-      const res = await fetch('/api/quantum/health');
-      health.textContent = JSON.stringify(await res.json(), null, 2);
-    } catch (e) { health.textContent = 'Fehler: ' + e; }
+  healthBtn?.addEventListener('click', async ()=>{
+    healthBtn.disabled=true; const old=healthBtn.textContent; healthBtn.textContent='Prüfe…';
+    health.textContent='';
+    try{
+      const r=await fetch('/api/quantum/health'); health.textContent=JSON.stringify(await r.json(),null,2);
+    }catch(e){ health.textContent='Fehler: '+e; } finally{ healthBtn.disabled=false; healthBtn.textContent=old; }
   });
 })();

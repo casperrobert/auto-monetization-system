@@ -1,216 +1,435 @@
-// ====== Globale State ======
-let userAccount = null;
+window.dashboardInit = async function () {
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('dashboard.js minimal loaded');
 
-// ====== Backendless-Logging (optional) ======
-async function logToBackendless(eventType, dataObj) {
-  const appId    = (document.getElementById('backendlessAppIdInput') || {}).value?.trim?.() || '';
-  const apiKey   = (document.getElementById('backendlessApiKeyInput') || {}).value?.trim?.() || '';
-  const table    = (document.getElementById('backendlessTableInput')  || {}).value?.trim?.() || '';
-  if (!appId || !apiKey || !table) return;
+    const byId = (id) => document.getElementById(id);
 
-  const payload = { event: eventType, ...dataObj, timestamp: new Date().toISOString() };
-  try {
-    const res = await fetch(`https://api.backendless.com/${appId}/${apiKey}/data/${table}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    byId('btn-health')?.addEventListener('click', async () => {
+      const r = await fetch('/api/health');
+      alert(JSON.stringify(await r.json(), null, 2));
     });
-    if (!res.ok) console.error('Backendless-Logging fehlgeschlagen:', res.status, res.statusText);
-  } catch (e) {
-    console.error('Backendless-Logging Netzwerkfehler:', e);
-  }
-}
 
-// ====== Startup: LocalStorage lesen, MetaMask prüfen ======
-window.addEventListener('DOMContentLoaded', async () => {
-  // LocalStorage → Felder füllen
-  const map = {
-    affiliateTag: 'affiliateTagInput',
-    backendlessAppId: 'backendlessAppIdInput',
-    backendlessApiKey: 'backendlessApiKeyInput',
-    backendlessTable: 'backendlessTableInput',
-  };
-  Object.entries(map).forEach(([k, id]) => {
-    const v = localStorage.getItem(k); if (v && document.getElementById(id)) document.getElementById(id).value = v;
+    byId('btn-qhealth')?.addEventListener('click', async () => {
+      const r = await fetch('/api/quantum/health');
+      alert(JSON.stringify(await r.json(), null, 2));
+    });
+
+    byId('btn-exec')?.addEventListener('click', async () => {
+      const r = await fetch('/api/quantum/execute', { method: 'POST' });
+      alert(JSON.stringify(await r.json(), null, 2));
+    });
+  });
+};
+
+// public/dashboard.js
+window.dashboardInit = function () {
+  const $ = (id) => document.getElementById(id);
+  const setText = (id, t) => { const el = $(id); if (el) el.textContent = t; };
+
+  async function fetchJSON(url, opt = {}) {
+    const r = await fetch(url, opt);
+    if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+    return r.json();
+  }
+
+  function renderTable(tableId, rows) {
+    const table = $(tableId); if (!table) return;
+    table.innerHTML = "";
+    const data = Array.isArray(rows) ? rows : (Array.isArray(rows?.items) ? rows.items : (rows ? [rows] : []));
+    if (!data.length) { table.innerHTML = "<tbody><tr><td>Keine Daten</td></tr></tbody>"; return; }
+
+    const cols = Array.from(data.reduce((s, r) => { Object.keys(r||{}).forEach(k => s.add(k)); return s; }, new Set()));
+    const thead = document.createElement("thead");
+    const trh = document.createElement("tr");
+    cols.forEach(c => { const th = document.createElement("th"); th.textContent = c; trh.appendChild(th); });
+    thead.appendChild(trh);
+
+    const tbody = document.createElement("tbody");
+    data.forEach(r => {
+      const tr = document.createElement("tr");
+      cols.forEach(c => {
+        const td = document.createElement("td");
+        let v = r?.[c]; if (v && typeof v === "object") v = JSON.stringify(v);
+        td.textContent = v ?? ""; tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+
+    table.appendChild(thead); table.appendChild(tbody);
+  }
+
+  async function loadAndRender(path, tableId) {
+    setText("status", `Lade ${path} …`);
+    try {
+      const data = await fetchJSON(path);
+      renderTable(tableId, data);
+      setText("status", `OK: ${path}`);
+    } catch (e) {
+      console.error(e);
+      setText("status", `Fehler bei ${path}: ${e.message || e}`);
+    }
+  }
+
+  // Buttons
+  $("btn-health")?.addEventListener("click", async () => {
+    try { const d = await fetchJSON("/api/health"); alert("Server OK: " + d.ok + "\nZeit: " + d.time); }
+    catch(e){ alert("Health-Fehler: " + (e.message||e)); }
   });
 
-  // MetaMask vorhanden?
-  const connectBtn = document.getElementById('connectButton');
-  if (typeof window.ethereum === 'undefined') {
-    if (connectBtn) { connectBtn.disabled = true; connectBtn.innerText = 'MetaMask nicht installiert'; }
-    return;
-  }
+  $("btn-qhealth")?.addEventListener("click", async () => {
+    try { const d = await fetchJSON("/api/quantum/health"); alert("Quantum OK: " + d.ok + "\nScheduler: " + d.scheduler + "\nLastRun: " + d.lastRun); }
+    catch(e){ alert("Quantum-Fehler: " + (e.message||e)); }
+  });
 
-  // Prüfen, ob schon autorisierte Accounts existieren
-  try {
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-    if (accounts.length > 0) {
-      userAccount = accounts[0];
-      const el = document.getElementById('walletAddressDisplay');
-      if (el) el.innerText = 'Verbunden: ' + userAccount;
+  $("btn-exec")?.addEventListener("click", async () => {
+    const btn = $("btn-exec"); const old = btn?.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = "…läuft"; }
+    try {
+      const d = await fetchJSON("/api/quantum/execute", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ demo: true }) });
+      alert("Execute OK: earned=" + d.earned);
+    } catch (e) {
+      alert("Execute-Fehler: " + (e.message || e));
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = old; }
     }
-  } catch (e) { console.warn('Wallet-Check fehlgeschlagen:', e); }
-});
+  });
 
-// ====== Wallet verbinden ======
-document.getElementById('connectButton')?.addEventListener('click', async () => {
-  if (typeof window.ethereum === 'undefined') return alert('MetaMask nicht gefunden.');
-  try {
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    if (accounts.length > 0) {
-      userAccount = accounts[0];
-      const label = document.getElementById('walletAddressDisplay');
-      if (label) label.innerText = 'Verbunden: ' + userAccount;
-      const btn = document.getElementById('connectButton');
-      if (btn) { btn.innerText = 'Wallet verbunden'; btn.disabled = true; }
-      logToBackendless('wallet_connect', { account: userAccount });
-    }
-  } catch (e) {
-    console.error('Wallet-Verbindungsfehler:', e);
-    alert('Wallet-Verbindung abgelehnt oder Fehler aufgetreten.');
-  }
-});
-
-// ====== ERC20-Balance abfragen ======
-document.getElementById('checkBalanceButton')?.addEventListener('click', async () => {
-  if (!userAccount) return alert('Bitte zuerst die Wallet verbinden.');
-  const tokenAddress = (document.getElementById('tokenAddressInput') || {}).value?.trim?.() || '';
-  if (!/^0x[a-fA-F0-9]{40}$/.test(tokenAddress)) return alert('Gültige ERC20-Contract-Adresse eingeben.');
-
-  try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
-    const erc20Abi = [
-      "function balanceOf(address owner) view returns (uint256)",
-      "function decimals() view returns (uint8)",
-      "function symbol() view returns (string)"
-    ];
-    const token = new ethers.Contract(tokenAddress, erc20Abi, provider);
-    const [bal, dec, sym] = await Promise.all([
-      token.balanceOf(userAccount),
-      token.decimals(),
-      token.symbol().catch(() => '')
+  $("btn-load-all")?.addEventListener("click", async () => {
+    await Promise.all([
+      loadAndRender("/api/courses", "tbl-courses"),
+      loadAndRender("/api/dropshipping", "tbl-dropshipping"),
+      loadAndRender("/api/dividends", "tbl-dividends"),
     ]);
-    const human = ethers.utils.formatUnits(bal, dec);
-    const text = `Balance: ${human} ${sym || 'Token'}`;
-    const out = document.getElementById('balanceResult'); if (out) out.innerText = text;
-    logToBackendless('balance_check', { token: tokenAddress, balance: human, symbol: sym });
-  } catch (e) {
-    console.error('Balance-Fehler:', e); alert('Balance konnte nicht abgerufen werden.');
-  }
-});
-
-// ====== CoinGecko-Preis ======
-document.getElementById('priceButton')?.addEventListener('click', () => {
-  const coinId  = (document.getElementById('coinIdInput') || {}).value?.trim?.().toLowerCase() || '';
-  const currency= (document.getElementById('currencyInput') || {}).value?.trim?.().toLowerCase() || '';
-  if (!coinId) return alert('Coin ID eingeben (z.B. "bitcoin").');
-  if (!currency) return alert('Währung eingeben (z.B. "usd").');
-
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=${currency}`;
-  fetch(url).then(r=>r.json()).then(data=>{
-    const out = document.getElementById('priceResult');
-    if (!data || !data[coinId] || data[coinId][currency] === undefined) {
-      if (out) out.innerText = `Kein Preis für "${coinId}" verfügbar.`;
-      return;
-    }
-    const price = data[coinId][currency];
-    if (out) out.innerText = `Aktueller Preis von ${coinId} in ${currency.toUpperCase()}: ${price}`;
-    logToBackendless('price_fetch', { coin: coinId, currency, price });
-  }).catch(e=>{
-    console.error('CoinGecko-Fehler:', e);
-    const out = document.getElementById('priceResult'); if (out) out.innerText = 'Fehler bei der Preisabfrage.';
   });
-});
+};
 
-// ====== Amazon Affiliate-Link ======
-document.getElementById('generateLinkButton')?.addEventListener('click', () => {
-  const productUrl = (document.getElementById('amazonUrlInput') || {}).value?.trim?.() || '';
-  const tag = (document.getElementById('affiliateTagInput') || {}).value?.trim?.() || '';
-  if (!productUrl || !tag) return alert('Produkt-URL und Affiliate-Tag eingeben.');
-  if (!productUrl.includes('amazon.')) return alert('Gültige Amazon-URL eingeben.');
+async function callAPI(url, options = {}) {
+  const res = await fetch(url, options);
+  return res.json();
+}
 
-  let finalUrl;
+document.getElementById("btn-exec").addEventListener("click", async () => {
+  const out = document.getElementById("out");
+  out.textContent = "⏳ starte…";
   try {
-    const u = new URL(productUrl); u.searchParams.set('tag', tag); finalUrl = u.toString();
-  } catch {
-    finalUrl = productUrl.includes('tag=') ? productUrl.replace(/tag=[^&]+/, 'tag=' + tag)
-                                           : productUrl + (productUrl.includes('?') ? '&' : '?') + 'tag=' + tag;
-  }
-  const out = document.getElementById('affiliateLinkOutput');
-  if (out) out.innerHTML = `<a href="${finalUrl}" target="_blank" rel="noopener">${finalUrl}</a>`;
-  localStorage.setItem('affiliateTag', tag);
-  logToBackendless('affiliate_generate', { tag, url: finalUrl });
-});
-
-// ====== Einstellungen speichern ======
-document.getElementById('saveConfigButton')?.addEventListener('click', () => {
-  const get = id => (document.getElementById(id) || {}).value?.trim?.() || '';
-  const vals = {
-    affiliateTag: get('affiliateTagInput'),
-    backendlessAppId: get('backendlessAppIdInput'),
-    backendlessApiKey: get('backendlessApiKeyInput'),
-    backendlessTable: get('backendlessTableInput'),
-  };
-  Object.entries(vals).forEach(([k,v]) => { if (v) localStorage.setItem(k, v); });
-  alert('Einstellungen gespeichert.');
-});
-
-// ====== MetaMask Events ======
-if (typeof window.ethereum !== 'undefined') {
-  window.ethereum.on('accountsChanged', (accounts) => {
-    const label = document.getElementById('walletAddressDisplay');
-    if (accounts.length > 0) {
-      userAccount = accounts[0];
-      if (label) label.innerText = 'Verbunden: ' + userAccount;
-      const bal = document.getElementById('balanceResult'); if (bal) bal.innerText = '';
-      logToBackendless('wallet_account_changed', { newAccount: userAccount });
-    } else {
-      userAccount = null;
-      if (label) label.innerText = 'Nicht verbunden';
-      const btn = document.getElementById('connectButton'); if (btn) { btn.innerText = '🔗 Mit MetaMask verbinden'; btn.disabled = false; }
-      const bal = document.getElementById('balanceResult'); if (bal) bal.innerText = '';
-      logToBackendless('wallet_account_changed', { disconnected: true });
-    }
-  });
-  window.ethereum.on('chainChanged', (chainId) => console.log('Netzwerk geändert:', chainId));
-}
-
-// ====== Backend-Buttons (Health / Quantum) ======
-async function callHealth() {
-  const res = await fetch('/api/health'); const data = await res.json();
-  alert('Server OK: ' + data.ok + '\nZeit: ' + data.time);
-}
-async function callQuantumHealth() {
-  const res = await fetch('/api/quantum/health'); const data = await res.json();
-  alert('Quantum OK: ' + data.ok + '\nScheduler: ' + data.scheduler + '\nLastRun: ' + data.lastRun);
-}
-async function callQuantumExecute() {
-  const btn = document.getElementById('btn-exec'); const old = btn ? btn.textContent : '';
-  if (btn) { btn.disabled = true; btn.textContent = '…läuft'; }
-  try {
-    const res = await fetch('/api/quantum/execute', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ demo:true }) });
-    const data = await res.json(); alert('Execute OK: earned=' + data.earned);
-  } catch(e){ alert('Fehler: ' + (e.message || e)); }
-  finally { if (btn) { btn.disabled = false; btn.textContent = old; } }
-}
-
-// Buttons verbinden
-window.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('btn-health')?.addEventListener('click', callHealth);
-  document.getElementById('btn-qhealth')?.addEventListener('click', callQuantumHealth);
-  document.getElementById('btn-exec')?.addEventListener('click', callQuantumExecute);
-
-  // zusätzlicher Button (falls vorhanden) um direkt Quantum-Ergebnis im <pre id="out-quantum"> zu zeigen:
-  const btnQ = document.getElementById('btn-quantum');
-  const outQ = document.getElementById('out-quantum');
-  if (btnQ && outQ) {
-    btnQ.addEventListener('click', async () => {
-      btnQ.disabled = true; const old = btnQ.textContent; btnQ.textContent = 'Läuft…';
-      outQ.textContent = '';
-      try {
-        const r = await fetch('/api/quantum/execute', { method:'POST' });
-        const d = await r.json(); outQ.textContent = JSON.stringify(d, null, 2);
-      } catch(e){ outQ.textContent = 'Fehler: ' + e; }
-      finally { btnQ.disabled = false; btnQ.textContent = old; }
+    const data = await callAPI("/api/quantum/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demo: true })
     });
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    out.textContent = "❌ Fehler: " + err.message;
   }
 });
-// Dashboard-Logik: Event-Handler für die Buttons
+
+document.getElementById("btn-health").addEventListener("click", async () => {
+  const out = document.getElementById("health");
+  out.textContent = "⏳ prüfe…";
+  try {
+    const data = await callAPI("/api/quantum/health");
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    out.textContent = "❌ Fehler: " + err.message;
+  }
+});
+
+let chart; // global
+
+function initChart() {
+  const ctx = document.getElementById('earningsChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [], // Zeitstempel
+      datasets: [{
+        label: 'Einnahmen (EUR)',
+        data: [],
+        fill: false,
+        borderColor: '#007bff',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        x: { title: { display: true, text: 'Zeit' } },
+        y: { title: { display: true, text: 'EUR' } }
+      }
+    }
+  });
+}
+
+function updateChart(value) {
+  if (!chart) return;
+  const now = new Date().toLocaleTimeString();
+  chart.data.labels.push(now);
+  chart.data.datasets[0].data.push(value);
+  if (chart.data.labels.length > 20) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  chart.update();
+}
+
+async function callAPI(url, options = {}) {
+  const res = await fetch(url, options);
+  return res.json();
+}
+
+document.getElementById("btn-exec").addEventListener("click", async () => {
+  const out = document.getElementById("out");
+  out.textContent = "⏳ starte…";
+  try {
+    const data = await callAPI("/api/quantum/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demo: true })
+    });
+    out.textContent = JSON.stringify(data, null, 2);
+    if (data.earned) updateChart(data.earned);
+  } catch (err) {
+    out.textContent = "❌ Fehler: " + err.message;
+  }
+});
+
+document.getElementById("btn-health").addEventListener("click", async () => {
+  const out = document.getElementById("health");
+  out.textContent = "⏳ prüfe…";
+  try {
+    const data = await callAPI("/api/quantum/health");
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    out.textContent = "❌ Fehler: " + err.message;
+  }
+});
+
+window.addEventListener("DOMContentLoaded", initChart);
+
+
+let chart; // global
+
+function initChart() {
+  const ctx = document.getElementById('earningsChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [], // Zeitstempel
+      datasets: [{
+        label: 'Einnahmen (EUR)',
+        data: [],
+        fill: false,
+        borderColor: '#007bff',
+        tension: 0.1
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      scales: {
+        x: { title: { display: true, text: 'Zeit' } },
+        y: { title: { display: true, text: 'EUR' } }
+      }
+    }
+  });
+}
+
+function updateChart(value) {
+  if (!chart) return;
+  const now = new Date().toLocaleTimeString();
+  chart.data.labels.push(now);
+  chart.data.datasets[0].data.push(value);
+  if (chart.data.labels.length > 20) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  chart.update();
+}
+
+async function callAPI(url, options = {}) {
+  const res = await fetch(url, options);
+  return res.json();
+}
+
+// --- Buttons ---
+document.getElementById("btn-exec").addEventListener("click", async () => {
+  const out = document.getElementById("out");
+  out.textContent = "⏳ starte…";
+  try {
+    const data = await callAPI("/api/quantum/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demo: true })
+    });
+    out.textContent = JSON.stringify(data, null, 2);
+    if (data.earned) updateChart(data.earned);
+  } catch (err) {
+    out.textContent = "❌ Fehler: " + err.message;
+  }
+});
+
+document.getElementById("btn-health").addEventListener("click", async () => {
+  const out = document.getElementById("health");
+  out.textContent = "⏳ prüfe…";
+  try {
+    const data = await callAPI("/api/quantum/health");
+    out.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    out.textContent = "❌ Fehler: " + err.message;
+  }
+});
+
+// --- Automatischer Abruf alle 10 Sekunden ---
+async function autoFetch() {
+  try {
+    const data = await callAPI("/api/quantum/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demo: true })
+    });
+    if (data.earned) updateChart(data.earned);
+  } catch (err) {
+    console.error("AutoFetch Fehler:", err.message);
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  initChart();
+  setInterval(autoFetch, 10000); // alle 10 Sekunden
+});
+
+let chart;       // Einzelwerte
+let totalChart;  // Gesamtsumme
+let totalEarned = 0;
+
+// --- Chart 1: Einzelwerte ---
+function initChart() {
+  const ctx = document.getElementById('earningsChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{
+      label: 'Einnahmen (EUR)',
+      data: [],
+      borderColor: '#007bff',
+      fill: false,
+      tension: 0.1
+    }]},
+    options: { responsive: true, animation: false }
+  });
+}
+
+// --- Chart 2: Gesamtsumme ---
+function initTotalChart() {
+  const ctx = document.getElementById('totalChart').getContext('2d');
+  totalChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{
+      label: 'Gesamt (EUR)',
+      data: [],
+      borderColor: '#28a745',
+      fill: true,
+      backgroundColor: 'rgba(40,167,69,0.1)',
+      tension: 0.1
+    }]},
+    options: { responsive: true, animation: false }
+  });
+}
+
+function updateCharts(value) {
+  const now = new Date().toLocaleTimeString();
+
+  // Einzelwerte
+  chart.data.labels.push(now);
+  chart.data.datasets[0].data.push(value);
+  if (chart.data.labels.length > 20) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  chart.update();
+
+  // Gesamtsumme
+  totalEarned += value;
+  totalChart.data.labels.push(now);
+  totalChart.data.datasets[0].data.push(totalEarned);
+  if (totalChart.data.labels.length > 20) {
+    totalChart.data.labels.shift();
+    totalChart.data.datasets[0].data.shift();
+  }
+  totalChart.update();
+}
+
+// --- API & Auto-Fetch bleibt gleich ---
+async function callAPI(url, options = {}) {
+  const res = await fetch(url, options);
+  return res.json();
+}
+
+async function autoFetch() {
+  try {
+    const data = await callAPI("/api/quantum/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demo: true })
+    });
+    if (data.earned) updateCharts(data.earned);
+  } catch (err) {
+    console.error("AutoFetch Fehler:", err.message);
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  initChart();
+  initTotalChart();
+  setInterval(autoFetch, 10000);
+});
+
+let chart;
+let totalChart;
+let totalEarned = 0;
+let lastEntries = [];
+
+// ... (initChart und initTotalChart bleiben wie zuvor)
+
+function updateCharts(value) {
+  const now = new Date().toLocaleTimeString();
+
+  // Einzelwerte-Chart
+  chart.data.labels.push(now);
+  chart.data.datasets[0].data.push(value);
+  if (chart.data.labels.length > 20) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  chart.update();
+
+  // Gesamtsumme
+  totalEarned += value;
+  totalChart.data.labels.push(now);
+  totalChart.data.datasets[0].data.push(totalEarned);
+  if (totalChart.data.labels.length > 20) {
+    totalChart.data.labels.shift();
+    totalChart.data.datasets[0].data.shift();
+  }
+  totalChart.update();
+
+  // Tabelle aktualisieren
+  updateTable(now, value, totalEarned);
+}
+
+function updateTable(time, value, total) {
+  const tbody = document.querySelector("#earningsTable tbody");
+
+  // Neuen Eintrag speichern
+  lastEntries.unshift({ time, value, total });
+  if (lastEntries.length > 10) lastEntries.pop();
+
+  // Tabelle neu rendern
+  tbody.innerHTML = lastEntries.map(e => `
+    <tr>
+      <td>${e.time}</td>
+      <td>${e.value.toFixed(2)}</td>
+      <td>${e.total.toFixed(2)}</td>
+    </tr>
+  `).join("");
+}
+

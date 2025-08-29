@@ -1,0 +1,169 @@
+const http = require('http');
+const fs   = require('fs');
+const path = require('path');
+
+/* ---------------- Security-Konstanten ---------------- */
+const PORT = Number(process.env.PORT || 3000);
+const PUBLIC_DIR = path.join(__dirname, 'public');
+
+// Rate Limit (15 Min Fenster, max 300 Req/IP)
+const RATE_WINDOW_MS = 15 * 60 * 1000;
+const RATE_MAX = 300;
+
+// CSP: Report-Only einschalten (Header: Content-Security-Policy-Report-Only)
+const CSP_REPORT_ONLY = true;
+
+/* ---------------- einfache Stores ---------------- */
+const rateStore = new Map();        // ip -> {count,start}
+const isLocal = (addr) => ['::1','127.0.0.1','::ffff:127.0.0.1'].includes(addr);
+
+/* ---------------- Helpers ---------------- */
+function nowIso() { return new Date().toISOString(); }
+
+function logLine(file, obj) {
+  const line = JSON.stringify({ ts: nowIso(), ...obj }) + '\n';
+  fs.appendFile(file, line, () => {});
+}
+
+function rateOk(ip) {
+  const now = Date.now();
+  let e = rateStore.get(ip);
+  if (!e || (now - e.start) > RATE_WINDOW_MS) {
+    e = { count: 0, start: now };
+    rateStore.set(ip, e);
+  }
+  e.count++;
+  if (e.count > RATE_MAX) {
+    logLine('.security.log', { event:'rate_limited', ip, count:e.count, windowStart:new Date(e.start).toISOString() });
+    return false;
+  }
+  return true;
+}
+
+function setSecurityHeaders(res) {
+  // Grundheader
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  res.setHeader('X-Powered-By', '');
+
+  const csp = "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; report-uri /csp-report";
+  if (CSP_REPORT_ONLY) {
+    res.setHeader('Content-Security-Policy-Report-Only', csp);
+  } else {
+    res.setHeader('Content-Security-Policy', csp);
+  }
+}
+
+function sendJson(res, code, obj) {
+  setSecurityHeaders(res);
+  res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(obj, null, 2));
+}
+
+function serveStatic(req, res) {
+  let p = req.url.split('?')[0];
+  if (p === '/') p = '/index.html';
+  const fp = path.join(PUBLIC_DIR, p.replace('..', ''));
+  fs.readFile(fp, (err, data) => {
+    if (err) {
+      setSecurityHeaders(res);
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+      return res.end('Not found');
+    }
+    setSecurityHeaders(res);
+    const ext = path.extname(fp).toLowerCase();
+    const mime = ext === '.html' ? 'text/html; charset=utf-8'
+              : ext === '.js'   ? 'application/javascript; charset=utf-8'
+              : ext === '.css'  ? 'text/css; charset=utf-8'
+              : 'application/octet-stream';
+    res.writeHead(200, { 'content-type': mime });
+    res.end(data);
+  });
+}
+
+// kleinen Body-Parser (JSON) bauen
+function readBody(req, limitBytes = 200 * 1024) {
+  return new Promise((resolve, reject) => {
+    let size = 0; const chunks = [];
+    req.on('data', c => {
+      size += c.length;
+      if (size > limitBytes) { reject(new Error('body_too_large')); req.destroy(); }
+      else chunks.push(c);
+    });
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8');
+      try {
+        // CSP kann als application/csp-report oder application/json kommen
+        if (req.headers['content-type'] && req.headers['content-type'].includes('csp-report')) {
+          resolve(JSON.parse(raw || '{}')); // {"csp-report":{...}}
+        } else if (req.headers['content-type'] && req.headers['content-type'].includes('json')) {
+          resolve(JSON.parse(raw || '{}'));
+        } else {
+          resolve({ raw });
+        }
+      } catch (e) { resolve({ raw }); }
+    });
+    req.on('error', reject);
+  });
+}
+
+let lastRun = null;
+
+/* ---------------- HTTP-Server ---------------- */
+const server = http.createServer(async (req, res) => {
+  const ip = req.socket.remoteAddress || 'unknown';
+
+  // Rate Limit
+  if (!rateOk(ip)) {
+    setSecurityHeaders(res);
+    res.writeHead(429, { 'content-type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({ ok:false, error:'rate_limited' }));
+  }
+
+  // Health
+  if (req.url.startsWith('/api/health')) {
+    return sendJson(res, 200, { ok:true, time: nowIso() });
+  }
+
+  // Quantum Health
+  if (req.url.startsWith('/api/quantum/health')) {
+    return sendJson(res, 200, { ok:true, scheduler:true, lastRun });
+  }
+
+  // Quantum Execute (Demo)
+  if (req.url.startsWith('/api/quantum/execute')) {
+    lastRun = nowIso();
+    return sendJson(res, 200, {
+      ok:true, mocked:true,
+      earned: Number((Math.random()*0.01 + 0.001).toFixed(4)),
+      input:{}, ts: lastRun
+    });
+  }
+
+  // CSP-Report Endpoint (nimmt JSON oder application/csp-report entgegen)
+  if (req.method === 'POST' && req.url === '/csp-report') {
+    const body = await readBody(req).catch(() => ({}));
+    logLine('.csp.log', { ua: req.headers['user-agent'] || '', report: body });
+    return sendJson(res, 200, { ok:true, stored:true });
+  }
+
+  // Rate-Limit-Status ansehen (nur lokal)
+  if (req.url === '/admin/ratelogs') {
+    if (!isLocal(ip)) return sendJson(res, 403, { ok:false, error:'forbidden' });
+    const out = [];
+    for (const [k,v] of rateStore.entries()) {
+      out.push({ ip:k, count:v.count, windowStart: new Date(v.start).toISOString() });
+    }
+    return sendJson(res, 200, { ok:true, windowMs: RATE_WINDOW_MS, max:RATE_MAX, entries: out });
+  }
+
+  // Static
+  return serveStatic(req, res);
+});
+
+server.listen(PORT, () => {
+  console.log(`[HARDENED+CSP] Server ready -> http://localhost:${PORT}`);
+});

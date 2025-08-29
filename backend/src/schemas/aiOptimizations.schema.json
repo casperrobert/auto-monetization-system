@@ -1,0 +1,14 @@
+{
+  "$id": "https://example.com/schemas/aiOptimizations.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AIOptimizations",
+  "type": "object",
+  "properties": {
+    "optimizations": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "required": ["optimizations"],
+  "additionalProperties": false
+}

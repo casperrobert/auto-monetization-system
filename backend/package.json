@@ -1,0 +1,45 @@
+{
+  "name": "secure-backend",
+  "version": "1.0.0",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "node ../server-express.js",
+    "start:dev": "node ../server-express.js",
+  "build": "docker build -t backend:zero-vuln .",
+  "test": "jest --runInBand"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "helmet": "^7.1.0",
+  "cors": "^2.8.5",
+  "ajv": "^8.12.0"
+  },
+  "devDependencies": {
+    "jest": "^29.6.0",
+    "supertest": "^6.3.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "reporters": [
+      "default",
+      [
+        "jest-junit",
+        {
+          "outputDirectory": "./reports",
+          "outputName": "junit.xml"
+        }
+      ]
+    ]
+  },
+  "jest-junit": {
+    "outputDirectory": "reports",
+    "outputName": "junit.xml"
+  },
+  "optionalDependencies": {
+    "jest-junit": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=20.12.2"
+  }
+}

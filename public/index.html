@@ -1,19 +1,195 @@
-<!doctype html><html lang="de"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CASPER SYSTEM 24</title>
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMS – Auto-Monetization System</title>
 <link rel="stylesheet" href="/styles.css">
-<body class="site">
-  <header class="site-nav"><strong>CASPER SYSTEM 24</strong></header>
-  <main class="container">
-    <section class="hero">
-      <h1>Starte in <span class="accent">Minuten</span></h1>
-      <p>Wallet verbinden, Live-Preise, Affiliate-Links, Einnahmen-Log.</p>
-      <p><a class="btn btn-primary" href="/dashboard.html">Zum Dashboard</a></p>
-    </section>
-  </main>
-  <footer class="site-footer">© <span id="y"></span> CASPER SYSTEM 24</footer>
-  <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
-  <script src="/js/erc20.js"></script>
-  <script src="/js/dashboard.js"></script>
-  <script src="/js/quantum.js"></script>
-</body></html>
+<header class="nav">
+  <div class="brand">💸 AMS</div>
+  <div style="margin-left:auto;display:flex;gap:.5rem">
+    <button class="btn secondary" id="nav-dashboard">Dashboard</button>
+    <button class="btn secondary" id="nav-ai">KI</button>
+    <button class="btn secondary" id="nav-admin">Admin</button>
+    <button class="btn" id="logout">Logout</button>
+  </div>
+</header>
+<main class="container">
+
+  <!-- Login -->
+  <section class="panel" id="view-login">
+    <h2>Login</h2>
+    <div class="grid cols-2">
+      <div><label>Nutzername</label><input class="input" id="login-user" value="admin"></div>
+      <div><label>Passwort</label><input class="input" id="login-pass" type="password" value="secure123"></div>
+    </div>
+    <div style="margin-top:.8rem;display:flex;gap:.5rem">
+      <button class="btn" id="login-btn">Einloggen</button>
+      <span id="login-msg" class="badge"></span>
+    </div>
+  </section>
+
+  <!-- Dashboard -->
+  <section class="panel hidden" id="view-dashboard">
+    <h2>Dashboard</h2>
+    <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.6rem">
+      <button class="btn" id="btn-start">Engine Start</button>
+      <button class="btn secondary" id="btn-reb">Rebalance</button>
+      <button class="btn secondary" id="btn-stop">Stop</button>
+      <button class="btn secondary" id="btn-recalc">Optimieren (+1% aktive)</button>
+      <button class="btn secondary" id="btn-refresh">Neu laden</button>
+    </div>
+    <table class="table" id="streams-table">
+      <thead><tr><th>Stream</th><th>Status</th><th>Erlös</th><th>Aktion</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <h3>Engine Status</h3>
+    <pre id="engine-out" class="code"></pre>
+  </section>
+
+  <!-- KI -->
+  <section class="panel hidden" id="view-ai">
+    <h2>KI-Konfiguration</h2>
+    <div class="grid cols-3">
+      <div>
+        <label>Provider</label>
+        <select id="ai-provider" class="input">
+          <option value="none">none</option>
+          <option value="openai">OpenAI</option>
+          <option value="claude">Claude</option>
+          <option value="gemini">Gemini</option>
+          <option value="local">Local LLM</option>
+        </select>
+      </div>
+      <div><label>OpenAI Key</label><input id="key-openai" class="input" placeholder="sk-..."></div>
+      <div><label>Claude Key</label><input id="key-claude" class="input" placeholder="..."></div>
+      <div><label>Gemini Key</label><input id="key-gemini" class="input" placeholder="..."></div>
+      <div><label>Local Token</label><input id="key-local" class="input" placeholder="..."></div>
+      <div>
+        <label>Risiko</label>
+        <select id="ai-risk" class="input">
+          <option value="conservative">konservativ</option>
+          <option value="balanced" selected>ausgewogen</option>
+          <option value="aggressive">aggressiv</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:.8rem;display:flex;gap:.5rem">
+      <label><input type="checkbox" id="feat-tune"> Auto-Tuning</label>
+      <label><input type="checkbox" id="feat-market"> Marktanalyse</label>
+      <button class="btn" id="ai-save">Speichern</button>
+      <span id="ai-msg" class="badge"></span>
+    </div>
+    <h3 style="margin-top:1rem">Aktuelle Konfiguration</h3>
+    <pre id="ai-out" class="code"></pre>
+  </section>
+
+  <!-- Admin -->
+  <section class="panel hidden" id="view-admin">
+    <h2>Admin / Monitoring</h2>
+    <pre id="admin-out" class="code"></pre>
+  </section>
+
+</main>
+
+<script>
+const $ = sel => document.querySelector(sel);
+const out = (el,data)=> el.textContent = JSON.stringify(data,null,2);
+const token = ()=> localStorage.getItem('ams_token') || '';
+const headersAuth = ()=> ({ 'content-type':'application/json', 'authorization':'Bearer '+token() });
+const api = (p,opts={}) => fetch(p,{...opts, headers:{ ...(opts.headers||{}), ...headersAuth() }}).then(r=>r.json());
+
+const views = { login:$('#view-login'), dash:$('#view-dashboard'), ai:$('#view-ai'), admin:$('#view-admin') };
+function show(k){ Object.values(views).forEach(v=>v.classList.add('hidden')); (k==='login'?views.login:k==='ai'?views.ai:k==='admin'?views.admin:views.dash).classList.remove('hidden'); }
+
+async function renderStreams(){
+  const res = await api('/api/streams'); if(!res.ok) return;
+  const tb = $('#streams-table tbody'); tb.innerHTML='';
+  res.streams.forEach(s=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = \`
+      <td>\${s.name}</td>
+      <td><span class="badge">\${s.status}</span></td>
+      <td>\${(s.revenue||0).toFixed(2)}</td>
+      <td>
+        <select data-id="\${s.id}" class="input" style="max-width:150px">
+          <option value="idle" \${s.status==='idle'?'selected':''}>idle</option>
+          <option value="active" \${s.status==='active'?'selected':''}>active</option>
+          <option value="paused" \${s.status==='paused'?'selected':''}>paused</option>
+        </select>
+        <button class="btn secondary" data-save="\${s.id}">Speichern</button>
+      </td>\`;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll('button[data-save]').forEach(b=>{
+    b.onclick = async (e)=>{
+      const id = e.target.getAttribute('data-save');
+      const sel = tb.querySelector('select[data-id="'+id+'"]');
+      const body = { status: sel.value };
+      const r = await api('/api/streams/'+id,{ method:'PUT', body: JSON.stringify(body) });
+      if(r.ok) renderStreams();
+    };
+  });
+}
+
+async function renderEngine(){ try {
+  const s = await api('/api/ams/status'); if(s.ok) out($('#engine-out'), s);
+} catch(_){} }
+
+async function renderAI(){
+  const r = await api('/api/ai/config'); if(!r.ok) return;
+  out($('#ai-out'), r.config || r);
+}
+
+async function renderAdmin(){
+  const r = await api('/api/admin/monitor'); if(r.ok) out($('#admin-out'), r);
+}
+
+// Nav
+$('#nav-dashboard').onclick=()=>{ show('dash'); renderStreams(); renderEngine(); };
+$('#nav-ai').onclick=()=>{ show('ai'); renderAI(); };
+$('#nav-admin').onclick=()=>{ show('admin'); renderAdmin(); };
+
+// Login
+$('#login-btn').onclick = async ()=>{
+  const username = $('#login-user').value.trim();
+  const password = $('#login-pass').value;
+  const res = await fetch('/api/auth/login',{method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({username,password})}).then(r=>r.json());
+  $('#login-msg').textContent = res.ok ? 'angemeldet' : (res.error || 'Fehler');
+  if(res.ok){ localStorage.setItem('ams_token', res.token); show('dash'); renderStreams(); renderEngine(); }
+};
+
+// Logout
+$('#logout').onclick = ()=>{ localStorage.removeItem('ams_token'); show('login'); };
+
+// Buttons
+$('#btn-start').onclick = async ()=>{ const r = await api('/api/ams/start',{method:'POST',body:JSON.stringify({simulation:true})}); if(r.ok) renderEngine(); };
+$('#btn-reb').onclick   = async ()=>{ const r = await api('/api/ams/rebalance',{method:'POST'}); if(r.ok) renderEngine(); };
+$('#btn-stop').onclick  = async ()=>{ const r = await api('/api/ams/stop',{method:'POST'}); if(r.ok) renderEngine(); };
+$('#btn-recalc').onclick= async ()=>{ const r = await api('/api/streams/recalc',{method:'POST'}); if(r.ok) renderStreams(); };
+$('#btn-refresh').onclick=()=>{ renderStreams(); renderEngine(); };
+
+// KI speichern
+$('#ai-save').onclick = async ()=>{
+  const payload = {
+    provider: $('#ai-provider').value,
+    keys: {
+      openai: $('#key-openai').value,
+      claude: $('#key-claude').value,
+      gemini: $('#key-gemini').value,
+      local: $('#key-local').value
+    },
+    features: {
+      autoTuning: $('#feat-tune').checked,
+      marketAnalysis: $('#feat-market').checked,
+      risk: $('#ai-risk').value
+    }
+  };
+  const r = await api('/api/ai/config',{method:'PUT', body: JSON.stringify(payload)});
+  $('#ai-msg').textContent = r.ok ? 'gespeichert' : 'Fehler';
+  renderAI();
+};
+
+// Auto-login falls Token vorhanden
+if (localStorage.getItem('ams_token')) { show('dash'); renderStreams(); renderEngine(); }
+else { show('login'); }
+
+// leichte Auto-Updates
+setInterval(()=>{ if(!views.dash.classList.contains('hidden')) renderEngine(); }, 5000);
+</script>

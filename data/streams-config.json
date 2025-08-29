@@ -1,0 +1,14 @@
+[
+  {
+    "id": "youtube-main",
+    "type": "youtube",
+    "enabled": true,
+    "params": { "uploadCadence": "weekly", "adBudget": 500, "riskScore": 0.5 }
+  },
+  {
+    "id": "affiliate-eu",
+    "type": "affiliate",
+    "enabled": true,
+    "params": { "priceMargin": 0.12, "platform": "amazon" }
+  }
+]

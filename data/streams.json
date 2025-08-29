@@ -1,0 +1,10 @@
+[
+  {"id":"youtube","name":"YouTube","revenue":0,"status":"idle","settings":{}},
+  {"id":"affiliate","name":"Affiliate Marketing","revenue":0,"status":"idle","settings":{}},
+  {"id":"dropshipping","name":"Dropshipping","revenue":0,"status":"idle","settings":{}},
+  {"id":"dividends","name":"Dividenden","revenue":0,"status":"idle","settings":{}},
+  {"id":"p2p","name":"P2P Lending","revenue":0,"status":"idle","settings":{}},
+  {"id":"reits","name":"REITs","revenue":0,"status":"idle","settings":{}},
+  {"id":"courses","name":"Online Kurse","revenue":0,"status":"idle","settings":{}},
+  {"id":"apps","name":"Mobile Apps","revenue":0,"status":"idle","settings":{}}
+]

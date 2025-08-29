@@ -1,0 +1,102 @@
+const http = require('http');
+const fs   = require('fs');
+const path = require('path');
+
+/* -------- Security: Headers + sehr einfache Rate-Limitierung -------- */
+
+const RATE_WINDOW_MS = 15 * 60 * 1000; // 15 Minuten
+const RATE_MAX = 300;                   // max. 300 Requests pro IP/Fenster
+const rateStore = new Map();            // ip -> {count,start}
+
+function rateOk(ip) {
+  const now = Date.now();
+  let e = rateStore.get(ip);
+  if (!e || (now - e.start) > RATE_WINDOW_MS) {
+    e = { count: 0, start: now };
+    rateStore.set(ip, e);
+  }
+  e.count++;
+  return e.count <= RATE_MAX;
+}
+
+function setSecurityHeaders(res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
+  // einfache, kompatible CSP (passt zu unserem kleinen Dashboard)
+  res.setHeader('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'");
+  // HSTS schadet lokal nicht, ist aber für echte HTTPS-Deployments relevant
+  res.setHeader('Strict-Transport-Security', 'max-age=15552000; includeSubDomains');
+  res.setHeader('X-Powered-By', ''); // verbergen
+}
+
+/* -------- Mini Static Server + API -------- */
+
+const PORT = Number(process.env.PORT || 3000);
+const publicDir = path.join(__dirname, 'public');
+
+function sendJson(res, code, obj) {
+  setSecurityHeaders(res);
+  res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' });
+  res.end(JSON.stringify(obj, null, 2));
+}
+
+function serveStatic(req, res) {
+  let p = req.url.split('?')[0];
+  if (p === '/') p = '/index.html';
+  const fp = path.join(publicDir, p.replace('..',''));
+  fs.readFile(fp, (err, data) => {
+    if (err) {
+      setSecurityHeaders(res);
+      res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+      return res.end('Not found');
+    }
+    setSecurityHeaders(res);
+    const ext = path.extname(fp).toLowerCase();
+    const mime = ext === '.html' ? 'text/html; charset=utf-8'
+              : ext === '.js'   ? 'application/javascript; charset=utf-8'
+              : ext === '.css'  ? 'text/css; charset=utf-8'
+              : 'application/octet-stream';
+    res.writeHead(200, { 'content-type': mime });
+    res.end(data);
+  });
+}
+
+let lastRun = null;
+const server = http.createServer((req, res) => {
+  const ip = req.socket.remoteAddress || 'unknown';
+
+  // Rate Limit
+  if (!rateOk(ip)) {
+    setSecurityHeaders(res);
+    res.writeHead(429, { 'content-type': 'application/json; charset=utf-8' });
+    return res.end(JSON.stringify({ ok:false, error:'rate_limited' }));
+  }
+
+  // APIs
+  if (req.url.startsWith('/api/health')) {
+    return sendJson(res, 200, { ok:true, time:new Date().toISOString() });
+  }
+
+  if (req.url.startsWith('/api/quantum/health')) {
+    return sendJson(res, 200, { ok:true, scheduler:true, lastRun });
+  }
+
+  if (req.url.startsWith('/api/quantum/execute')) {
+    // Demo-Ausführung (mock)
+    lastRun = new Date().toISOString();
+    return sendJson(res, 200, {
+      ok:true, mocked:true,
+      earned: Number((Math.random()*0.01 + 0.001).toFixed(4)),
+      input:{}, ts: lastRun
+    });
+  }
+
+  // Static
+  return serveStatic(req, res);
+});
+
+server.listen(PORT, () => {
+  console.log(`[HARDENED] Server ready -> http://localhost:${PORT}`);
+});

@@ -1,9 +1,32 @@
 <!doctype html><html lang="de"><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CASPER SYSTEM 24 – Realtime Dashboard</title>
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Dashboard</title>
 <link rel="stylesheet" href="/styles.css">
+<body class="site"><main class="container">
+  <h2>Realtime Dashboard</h2>
+  <section class="panel">
+    <button id="btn-exec" class="btn">Strategie einmal ausführen</button>
+    <pre id="out" class="code"></pre>
+  </section>
+  <section class="panel">
+    <button id="btn-health" class="btn">Quantum-Health</button>
+    <pre id="health" class="code"></pre>
+  </section>
+</main>
+<script src="/js/dashboard.js"></script>
+</body></html>
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CASPER SYSTEM 24 – Realtime Dashboard</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
 <body class="site">
-  <header class="site-nav"><a href="/" class="site-nav__home">Home</a> <strong>Dashboard</strong></header>
+  <header class="site-nav">
+    <a href="/" class="site-nav__home">🏠 Home</a>
+    <strong>Dashboard</strong>
+  </header>
   <main class="container">
     <h2>Realtime Dashboard</h2>
 
@@ -19,13 +42,122 @@
       <pre id="health" class="code"></pre>
     </section>
   </main>
-  <footer class="site-footer">© <span id="y"></span> CASPER SYSTEM 24</footer>
+  <footer class="site-footer">
+    © <span id="y"></span> CASPER SYSTEM 24
+  </footer>
   <script>document.getElementById('y').textContent=new Date().getFullYear()</script>
   <script src="/js/dashboard.js"></script>
-  <!-- Additional scripts should be placed before closing body tag -->
-  <script src="/js/erc20.js"></script>
   <script src="/js/quantum.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/ethers@5/dist/ethers.min.js"></script>
+  <script src="/js/erc20.js"></script>
 </body>
 </html>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="/js/dashboard.js"></script>
+<script src="/js/quantum.js"></script>
+<script src="/js/erc20.js"></script>
+<section class="panel">
+  <h3>3) Einnahmen-Verlauf</h3>
+  <canvas id="earningsChart" height="120"></canvas>
+</section>
+
+
+<section class="panel">
+  <h3>📈 Einnahmen-Entwicklung</h3>
+  <canvas id="earningsChart" height="120"></canvas>
+</section>
+
+<section class="panel">
+  <h3>💰 Gesamteinnahmen (kumuliert)</h3>
+  <canvas id="totalChart" height="120"></canvas>
+</section>
+
+let chart;       // Einzelwerte
+let totalChart;  // Gesamtsumme
+let totalEarned = 0;
+
+// --- Chart 1: Einzelwerte ---
+function initChart() {
+  const ctx = document.getElementById('earningsChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{
+      label: 'Einnahmen (EUR)',
+      data: [],
+      borderColor: '#007bff',
+      fill: false,
+      tension: 0.1
+    }]},
+    options: { responsive: true, animation: false }
+  });
+}
+
+// --- Chart 2: Gesamtsumme ---
+function initTotalChart() {
+  const ctx = document.getElementById('totalChart').getContext('2d');
+  totalChart = new Chart(ctx, {
+    type: 'line',
+    data: { labels: [], datasets: [{
+      label: 'Gesamt (EUR)',
+      data: [],
+      borderColor: '#28a745',
+      fill: true,
+      backgroundColor: 'rgba(40,167,69,0.1)',
+      tension: 0.1
+    }]},
+    options: { responsive: true, animation: false }
+  });
+}
+
+function updateCharts(value) {
+  const now = new Date().toLocaleTimeString();
+
+  // Einzelwerte
+  chart.data.labels.push(now);
+  chart.data.datasets[0].data.push(value);
+  if (chart.data.labels.length > 20) {
+    chart.data.labels.shift();
+    chart.data.datasets[0].data.shift();
+  }
+  chart.update();
+
+  // Gesamtsumme
+  totalEarned += value;
+  totalChart.data.labels.push(now);
+  totalChart.data.datasets[0].data.push(totalEarned);
+  if (totalChart.data.labels.length > 20) {
+    totalChart.data.labels.shift();
+    totalChart.data.datasets[0].data.shift();
+  }
+  totalChart.update();
+}
+
+// --- API & Auto-Fetch bleibt gleich ---
+async function callAPI(url, options = {}) {
+  const res = await fetch(url, options);
+  return res.json();
+}
+
+async function autoFetch() {
+  try {
+    const data = await callAPI("/api/quantum/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ demo: true })
+    });
+    if (data.earned) updateCharts(data.earned);
+  } catch (err) {
+    console.error("AutoFetch Fehler:", err.message);
+  }
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+  initChart();
+  initTotalChart();
+  setInterval(autoFetch, 10000);
+});
+
+<section class="panel">
+  <h3>
+
+    

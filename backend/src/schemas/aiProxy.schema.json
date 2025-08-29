@@ -1,0 +1,14 @@
+{
+  "$id": "https://example.com/schemas/aiProxy.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "AIProxy",
+  "type": "object",
+  "required": ["provider","apiKey","prompt"],
+  "properties": {
+    "provider": { "type": "string" },
+    "apiKey": { "type": "string" },
+    "prompt": { "type": "string" },
+    "model": { "type": "string" }
+  },
+  "additionalProperties": false
+}

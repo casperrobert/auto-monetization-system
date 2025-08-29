@@ -1,0 +1,24 @@
+const http=require('http');const fs=require('fs');const path=require('path');
+const PORT=Number(process.env.PORT||3000);let lastRun=null;
+function send(res,code,body,extra={}){const s=typeof body==='string'||Buffer.isBuffer(body);
+  res.writeHead(code,Object.assign({
+    'content-type':s?'text/html; charset=utf-8':'application/json',
+    'x-frame-options':'SAMEORIGIN','x-content-type-options':'nosniff',
+    'referrer-policy':'no-referrer','cross-origin-opener-policy':'same-origin',
+    'cross-origin-resource-policy':'same-origin'},extra));res.end(s?body:JSON.stringify(body));}
+function serveStatic(req,res){const rel=req.url==='/'?'/index.html':decodeURIComponent(req.url);
+  const base=path.join(__dirname,'public');const p=path.join(base,rel);
+  if(!p.startsWith(base))return send(res,403,'Forbidden');
+  fs.readFile(p,(e,d)=>{if(e)return send(res,404,'Not found');
+    const ext=path.extname(p).slice(1);const types={html:'text/html; charset=utf-8',
+      js:'text/javascript; charset=utf-8',css:'text/css; charset=utf-8',json:'application/json'};
+    send(res,200,d,{'content-type':types[ext]||'application/octet-stream'});});}
+const srv=http.createServer((req,res)=>{
+  if(req.method==='GET'&&req.url==='/api/health')return send(res,200,{ok:true,time:new Date().toISOString()});
+  if(req.method==='GET'&&req.url==='/api/quantum/health')return send(res,200,{ok:true,scheduler:true,lastRun});
+  if(req.method==='POST'&&req.url==='/api/quantum/execute'){let b='';req.on('data',c=>{b+=c;if(b.length>200000)req.destroy();});
+    req.on('end',()=>{lastRun=new Date().toISOString();const earned=Number((Math.random()*0.01+0.001).toFixed(4));
+      let input={};try{input=b?JSON.parse(b):{}}catch{};send(res,200,{ok:true,mocked:true,earned,input,ts:lastRun});});return;}
+  return serveStatic(req,res);
+});
+srv.listen(PORT,()=>console.log(`[PURE] Server ready -> http://localhost:${PORT}`));

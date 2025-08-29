@@ -1,0 +1,316 @@
+cd /workspaces/auto-monetization-system
+
+cat > index.js <<'EOF'
+const express = require('express');
+const path = require('path');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+app.get('/', (req, res) => res.redirect('/dashboard.html'));
+
+app.get('/api/health', (req, res) =>
+  res.json({ ok: true, time: new Date().toISOString() })
+);
+
+app.get('/api/quantum/health', (req, res) =>
+  res.json({ ok: true, scheduler: 'active', lastRun: new Date(Date.now()-60000).toISOString() })
+);
+
+app.post('/api/quantum/execute', (req, res) =>
+  res.json({ earned: Number(Math.random().toFixed(3)), tx: '0x' + Math.random().toString(16).slice(2,10) })
+);
+
+app.use((req, res) => res.status(404).json({ ok:false, error:'Not found' }));
+
+app.listen(PORT, () => console.log(`✅ Server läuft auf http://localhost:${PORT}`));
+EOF
+
+nano public/dashboard.js
+
+head -n 5 index.js
+head -n 5 public/dashboard.js
+
+npm run dev
+
+✅ Server läuft auf http://localhost:3000
+
+ps aux | grep node
+
+curl -i http://localhost:3000/api/health
+
+curl -i http://localhost:3000/api/quantum/health
+
+curl -i -X POST http://localhost:3000/api/quantum/execute
+
+HTTP/1.1 200 OK
+{ "ok": true, "time": "2025-08-21T00:15:00.123Z" }
+
+{ "ok": true, "scheduler": "active", "lastRun": "2025-08-21T00:14:00.000Z" }
+
+{ "earned": 0.137, "tx": "0xabc12345" }
+
+cd /workspaces/auto-monetization-system
+npm run dev
+# Erwartung: "✅ Server läuft auf http://localhost:3000"
+
+curl -i http://localhost:3000/api/health
+curl -i http://localhost:3000/api/quantum/health
+curl -i -X POST http://localhost:3000/api/quantum/execute
+
+head -n 5 index.js
+# muss mit "const express = require('express');" beginnen
+
+npm run dev
+
+// scripts/project-overview.js
+const fs = require("fs");
+const path = require("path");
+const Table = require("cli-table3");
+const chalk = require("chalk");
+
+// 1) Modelle einlesen
+const modelsDir = path.join(__dirname, "../models");
+const models = fs.readdirSync(modelsDir).filter(f => f.endsWith(".js"));
+
+// 2) Tabelle vorbereiten
+const table = new Table({
+  head: [chalk.blue("Modul"), chalk.green("Pfad"), chalk.yellow("Status")],
+  colWidths: [20, 50, 15],
+});
+
+// 3) Zeilen füllen
+models.forEach(file => {
+  try {
+    require(path.join(modelsDir, file)); // Test ob es ladbar ist
+    table.push([file.replace(".js", ""), `models/${file}`, chalk.green("OK")]);
+  } catch (err) {
+    table.push([file.replace(".js", ""), `models/${file}`, chalk.red("Fehler")]);
+  }
+});
+
+// 4) Ergebnis anzeigen
+console.log(chalk.bold("\n📊 Projekt-Überblick\n"));
+console.log(table.toString());
+console.log(chalk.gray(`\nGefundene Module: ${models.length}\n`));
+
+
+node scripts/project-overview.js
+
+📊 Projekt-Überblick
+
+┌────────────────────┬───────────────────────────┬──────────────┐
+│ Modul              │ Pfad                      │ Status       │
+├────────────────────┼───────────────────────────┼──────────────┤
+│ affiliate          │ models/affiliate.js       │ OK           │
+│ dividends          │ models/dividends.js       │ OK           │
+│ reits              │ models/reits.js           │ OK           │
+│ youtube            │ models/youtube.js         │ OK           │
+└────────────────────┴───────────────────────────┴──────────────┘
+
+Gefundene Module: 6
+
+node scripts/full-overview.js
+
+📊 FULL PROGRAM OVERVIEW
+
+📦 Models:
+┌────────────────────┬──────────────────────────────┐
+│ Model              │ Pfad                         │
+├────────────────────┼──────────────────────────────┤
+│ affiliate          │ models/affiliate.js          │
+│ dividends          │ models/dividends.js          │
+│ youtube            │ models/youtube.js            │
+└────────────────────┴──────────────────────────────┘
+
+🌐 API Endpoints:
+┌────────────────────────────────────┐
+│ GET /api/health                    │
+│ GET /api/quantum/health            │
+│ POST /api/quantum/execute          │
+└────────────────────────────────────┘
+
+🖼 Public Files:
+┌────────────────────────────────────┐
+│ public/dashboard.html               │
+│ public/dashboard.js                 │
+└────────────────────────────────────┘#!/usr/bin/env node
+/**
+ * Voll-Überblick fürs Terminal
+ * - Models (ladbar?)
+ * - Public Files
+ * - Express-Endpunkte (aus index.js geparst)
+ * - Port-Check
+ * - Health / Quantum-Checks
+ * - Optional: Markdown-Export (--md REPORT.md)
+ *
+ * Nutzung:
+ *   node scripts/full-overview.js
+ *   node scripts/full-overview.js --port 3000 --md PROJECT_OVERVIEW.md
+ */
+
+const fs = require('fs');
+const path = require('path');
+const net = require('net');
+const chalk = require('chalk');
+const Table = require('cli-table3');
+
+const CWD = process.cwd();
+const args = process.argv.slice(2);
+const getArg = (flag, def) => {
+  const i = args.indexOf(flag);
+  return i >= 0 && args[i + 1] && !args[i + 1].startsWith('--') ? args[i + 1] : def;
+};
+const has = (flag) => args.includes(flag);
+
+const PORT   = parseInt(getArg('--port', '3000'), 10) || 3000;
+const MD_OUT = getArg('--md', ''); // leer = kein Export
+
+// ---------- utils ----------
+function list(dir, filter = () => true) {
+  const p = path.join(CWD, dir);
+  return fs.existsSync(p) ? fs.readdirSync(p).filter(filter).map(f => path.join(dir, f)) : [];
+}
+function read(file) {
+  try { return fs.readFileSync(path.join(CWD, file), 'utf8'); } catch { return ''; }
+}
+function pretty(obj, limit = 500) {
+  const s = typeof obj === 'string' ? obj : JSON.stringify(obj, null, 2);
+  return s.length > limit ? s.slice(0, limit) + '\n…(gekürzt)…' : s;
+}
+function portCheck(port, host = '127.0.0.1', timeout = 1500) {
+  return new Promise(res => {
+    const socket = new net.Socket();
+    let done = false;
+    const finish = (ok, msg) => { if (done) return; done = true; socket.destroy(); res({ ok, msg }); };
+    socket.setTimeout(timeout);
+    socket.once('connect', () => finish(true, `Port ${port} offen`));
+    socket.once('timeout', () => finish(false, 'Timeout'));
+    socket.once('error',  e => finish(false, e.code || e.message));
+    socket.connect(port, host);
+  });
+}
+async function hit(url, options = {}) {
+  const t0 = Date.now();
+  try {
+    const r = await fetch(url, { method: 'GET', ...options });
+    const ms = Date.now() - t0;
+    const text = await r.text();
+    let json = null; try { json = JSON.parse(text); } catch {}
+    return { ok: r.ok, status: `${r.status} ${r.statusText}`, ms, json, raw: text };
+  } catch (e) {
+    return { ok: false, status: e.message || String(e), ms: Date.now() - t0, json: null, raw: '' };
+  }
+}
+
+// ---------- markdown buffer (optional) ----------
+let md = [];
+const mH1 = (t) => md.push(`# ${t}`);
+const mH2 = (t) => md.push(`\n## ${t}\n`);
+const mCode = (c, lang='') => md.push(`\n\`\`\`${lang}\n${c}\n\`\`\`\n`);
+const mTable = (rows) => {
+  if (!rows || !rows.length) return;
+  const head = Object.keys(rows[0]);
+  md.push('|' + head.join('|') + '|');
+  md.push('|' + head.map(()=>'---').join('|') + '|');
+  rows.forEach(r => md.push('|' + head.map(k => String(r[k] ?? '')).join('|') + '|'));
+  md.push('');
+};
+
+// ---------- 1) MODELS ----------
+function checkModels() {
+  const files = list('models', f => f.endsWith('.js'));
+  const table = new Table({ head: [chalk.blue('Model'), chalk.green('Pfad'), chalk.yellow('Status')], colWidths: [20, 50, 20], wordWrap: true });
+  const rows = [];
+  files.forEach(f => {
+    const label = path.basename(f, '.js');
+    try { require(path.join(CWD, f)); table.push([label, f, chalk.green('OK')]); rows.push({ Model: label, Pfad: f, Status: 'OK' }); }
+    catch { table.push([label, f, chalk.red('Fehler')]); rows.push({ Model: label, Pfad: f, Status: 'Fehler' }); }
+  });
+  console.log(chalk.bold('\n📦 Models'));
+  console.log(table.toString());
+  if (MD_OUT) { mH2('Models'); mTable(rows); }
+}
+
+// ---------- 2) PUBLIC ----------
+function listPublic() {
+  const files = list('public');
+  const table = new Table({ head: [chalk.magenta('Datei')], colWidths: [70], wordWrap: true });
+  files.forEach(f => table.push([f]));
+  console.log(chalk.bold('\n🖼 Public Files'));
+  console.log(table.toString());
+  if (MD_OUT) { mH2('Public Files'); mTable(files.map(f => ({ Datei: f }))); }
+}
+
+// ---------- 3) API aus index.js parsen ----------
+function parseEndpoints() {
+  const src = read('index.js');
+  const endpoints = [];
+  const re = /\b(app|router)\s*\.\s*(get|post|put|delete|patch|options|head|all)\s*\(\s*(['"`])([^'"`]+)\3/g;
+  let m;
+  while ((m = re.exec(src))) endpoints.push({ method: m[2].toUpperCase(), path: m[4] });
+  const table = new Table({ head: [chalk.cyan('Methode'), chalk.cyan('Pfad')], colWidths: [10, 60], wordWrap: true });
+  endpoints.forEach(e => table.push([e.method, e.path]));
+  console.log(chalk.bold('\n🌐 Express-Endpunkte (aus index.js)'));
+  if (endpoints.length) console.log(table.toString()); else console.log(chalk.gray('Keine erkannt.'));
+  if (MD_OUT) { mH2('Express-Endpunkte'); endpoints.length ? mTable(endpoints.map(e => ({ Methode: e.method, Pfad: e.path }))) : md.push('Keine erkannt.\n'); }
+}
+
+// ---------- 4) Netzwerk / Health ----------
+async function networkChecks() {
+  console.log(chalk.bold('\n🔌 Netzwerk & Health'));
+  if (MD_OUT) mH2('Netzwerk & Health');
+
+  // Port
+  const p = await portCheck(PORT);
+  console.log(p.ok ? chalk.green(`✔ Port ${PORT} offen`) : chalk.red(`✖ Port ${PORT} nicht erreichbar (${p.msg})`));
+  if (MD_OUT) mTable([{ Port: PORT, Status: p.ok ? 'offen' : `nicht erreichbar (${p.msg})` }]);
+
+  const base = `http://localhost:${PORT}`;
+  // /api/health
+  const h = await hit(`${base}/api/health`);
+  console.log((h.ok ? chalk.green('✔') : chalk.red('✖')) + ` /api/health → ${h.status} (${h.ms}ms)`);
+  if (h.json) console.log(chalk.gray(pretty(h.json)));
+  if (MD_OUT) { mTable([{ URL: '/api/health', Status: h.status, Dauer_ms: h.ms, OK: h.ok }]); if (h.json) mCode(pretty(h.json), 'json'); }
+
+  // /api/quantum/health
+  const qh = await hit(`${base}/api/quantum/health`);
+  console.log((qh.ok ? chalk.green('✔') : chalk.red('✖')) + ` /api/quantum/health → ${qh.status} (${qh.ms}ms)`);
+  if (qh.json) console.log(chalk.gray(pretty(qh.json)));
+  if (MD_OUT) { mTable([{ URL: '/api/quantum/health', Status: qh.status, Dauer_ms: qh.ms, OK: qh.ok }]); if (qh.json) mCode(pretty(qh.json), 'json'); }
+
+  // POST /api/quantum/execute
+  const qe = await hit(`${base}/api/quantum/execute`, { method: 'POST' });
+  const earned = qe?.json && typeof qe.json.earned !== 'undefined' ? qe.json.earned : '';
+  console.log((qe.ok ? chalk.green('✔') : chalk.red('✖')) + ` /api/quantum/execute → ${qe.status} (${qe.ms}ms)` + (earned !== '' ? chalk.cyan(` | earned: ${earned}`) : ''));
+  if (qe.json) console.log(chalk.gray(pretty(qe.json)));
+  if (MD_OUT) { mTable([{ URL: '/api/quantum/execute', Status: qe.status, Dauer_ms: qe.ms, OK: qe.ok, earned }]); if (qe.json) mCode(pretty(qe.json), 'json'); }
+}
+
+// ---------- main ----------
+(async function main() {
+  try {
+    console.log(chalk.bold.cyan('\n=== FULL PROGRAM OVERVIEW ==='));
+    if (MD_OUT) { md = []; mH1('Full Program Overview'); }
+
+    checkModels();
+    listPublic();
+    parseEndpoints();
+    await networkChecks();
+
+    if (MD_OUT) {
+      const outPath = path.join(CWD, MD_OUT);
+      fs.writeFileSync(outPath, md.join('\n'), 'utf8');
+      console.log(chalk.bold.green(`\n�� Markdown exportiert: ${outPath}`));
+    }
+    console.log(chalk.bold.green('\nFertig ✅\n'));
+  } catch (e) {
+    console.error(chalk.red('Fehler im Overview-Skript:'), e?.message || e);
+    process.exit(1);
+  }
+})();
+
+

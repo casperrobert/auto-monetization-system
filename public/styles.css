@@ -1,12 +1,18 @@
-:root{--bg:#0b1220;--fg:#e6eef9;--muted:#9fb4d6;--brand:#22d3ee;--line:#21314d}
-*{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu}
-.container{max-width:960px;margin:0 auto;padding:2rem}
-.site-nav{padding:1rem 2rem;border-bottom:1px solid var(--line);display:flex;gap:1rem;align-items:center}
-.site-nav a{color:var(--muted);text-decoration:none}
-.hero h1{font-size:clamp(1.8rem,3vw,3rem);margin:.5rem 0 1rem}
-.accent{color:var(--brand)}
-.btn{display:inline-block;padding:.7rem 1rem;border:1px solid var(--line);border-radius:.6rem;background:#142033;color:var(--fg);cursor:pointer}
-.btn-primary{font-weight:700;background:linear-gradient(135deg,#1fb6ff,#22d3ee);color:#04101e;border:0}
-.panel{margin:1.2rem 0;padding:1rem;border:1px solid var(--line);border-radius:.6rem;background:#0f1a2c}
-.code{background:#0a1322;border:1px solid var(--line);padding:.8rem;border-radius:.4rem;white-space:pre-wrap}
-.site-footer{padding:1.2rem 2rem;border-top:1px solid var(--line);color:var(--muted)}
+*{box-sizing:border-box} body{font-family:system-ui,Arial,sans-serif;margin:0;background:#0b1020;color:#e9edf8}
+a{color:inherit}
+.nav{display:flex;gap:.75rem;align-items:center;background:#0d122a;padding:.8rem 1rem;border-bottom:1px solid #1b2348}
+.nav .brand{font-weight:700}
+.container{max-width:1100px;margin:1.2rem auto;padding:0 1rem}
+.panel{background:#0f1634;border:1px solid #1b2348;border-radius:12px;padding:1rem;margin-bottom:1rem}
+.btn{background:#e9edf8;color:#0b1020;border:0;border-radius:10px;padding:.55rem .8rem;cursor:pointer}
+.btn.secondary{background:transparent;color:#e9edf8;border:1px solid #3a4691}
+.input, select{width:100%;padding:.6rem .7rem;border-radius:10px;border:1px solid #2a3576;background:#0d1430;color:#e9edf8}
+.grid{display:grid;gap:1rem}
+.grid.cols-2{grid-template-columns:1fr 1fr}
+.grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.table{width:100%;border-collapse:collapse}
+.table th,.table td{padding:.55rem;border-bottom:1px solid #1b2348}
+.badge{display:inline-block;padding:.15rem .5rem;border-radius:999px;border:1px solid #3a4691}
+.code{background:#0a0f28;border:1px solid #1b2348;border-radius:10px;padding:10px;overflow:auto}
+.hidden{display:none}
+.center{display:flex;justify-content:center;align-items:center}

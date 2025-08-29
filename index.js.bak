@@ -1,0 +1,32 @@
+require('dotenv').config();
+const express = require('express');
+const path = require('path');
+
+const app = express();
+const PORT = Number(process.env.PORT || 3000);
+const MOCK = String(process.env.MOCK_MODE || 'true') === 'true';
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+let quantum=null;
+try {
+  quantum = require('./src/quantum/quantum');
+  if (!MOCK) quantum.startScheduler?.();
+} catch (e) {
+  console.warn('Quantum-Backend nicht geladen:', e?.message || e);
+}
+
+app.get('/api/health', (_req,res)=> res.json({ ok:true, time:new Date().toISOString(), mock:MOCK }));
+app.get('/api/quantum/health', (_req,res)=> quantum ? res.json(quantum.health()) : res.json({ ok:false, reason:'module missing' }));
+app.post('/api/quantum/execute', async (req,res)=>{
+  try{
+    if(!quantum) return res.status(503).json({ ok:false, reason:'quantum unavailable' });
+    res.json(await quantum.executeOnce(req.body||{}));
+  }catch(e){ res.status(500).json({ ok:false, error:String(e?.message||e) }); }
+});
+
+app.listen(PORT, ()=> {
+  console.log('✅ Server läuft auf Port', PORT);
+  console.log('→ Dashboard: http://localhost:'+PORT+'/dashboard.html');
+});

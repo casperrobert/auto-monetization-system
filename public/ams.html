@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="de">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMS – Simulations-Engine</title>
+<link rel="stylesheet" href="/styles.css">
+<body class="site">
+<header class="site-nav"><a href="/" class="site-nav__home">Home</a> <strong>AMS Engine</strong></header>
+<main class="container">
+  <section class="panel">
+    <h3>Steuerung</h3>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap">
+      <button id="btn-start" class="btn">Start (Simulation)</button>
+      <button id="btn-stop" class="btn">Stop</button>
+      <button id="btn-reb" class="btn">Rebalance</button>
+      <button id="btn-stat" class="btn">Status</button>
+    </div>
+  </section>
+  <section class="panel">
+    <h3>Status</h3>
+    <pre id="out" class="code" style="min-height:240px"></pre>
+  </section>
+</main>
+<footer class="site-footer">© <span id="y"></span> CASPER SYSTEM 24</footer>
+<script>document.getElementById('y').textContent=new Date().getFullYear()</script>
+<script src="/js/ams.js"></script>
+</body>
+</html>
