@@ -4,9 +4,17 @@
   "description": "Ein Dashboard für Auto-Monetization mit Courses, Dropshipping und Dividends",
   "main": "index.js",
   "scripts": {
-    "start": "node server-express.js",
-    "dev": "node index.js",
-    "overview": "node overview.js"
+  "start": "node server-express.js",
+  "dev": "node index.js",
+  "test": "npm run smoke:all",
+  "overview": "node overview.js",
+  "smoke:providers": "node test/test-providers-smoke.js",
+  "smoke:translator": "node test/test-quantum-translator.js",
+  "smoke:translator-ibm": "node test/test-translator-to-ibm.js",
+  "smoke:all": "npm run smoke:providers && npm run smoke:translator && npm run smoke:translator-ibm"
+  },
+  "docker": {
+    "smokeImage": "ams-smoke:latest"
   },
   "dependencies": {
     "chalk": "^4.1.2",

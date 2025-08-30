@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  backend:
+    build: .
+    image: ams-backend:dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - DISABLE_AI=1
+      - DISABLE_WS=1
+      - DISABLE_PUSH=1
+      - DISABLE_NOTIFICATION=1
+    volumes:
+      - ./:/usr/src/app
+    command: ["node", "server-express.js"]

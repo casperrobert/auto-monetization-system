@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: casper-ams-backend
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - JWT_SECRET=${JWT_SECRET:-supersecret}
+      - FINANZAMT_IBAN=${FINANZAMT_IBAN:-DE89370400440532013000}
+      - TAX_SECRET=${TAX_SECRET:-tax-secret-key}
+      - ALLOWED_ORIGINS=https://localhost,https://ams.local
+    volumes:
+      - backend_data:/app/data
+    networks:
+      - ams-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build: ./webapp
+    container_name: casper-ams-frontend
+    networks:
+      - ams-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.25.4-alpine
+    container_name: casper-ams-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - ams-network
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  monitoring:
+    image: prom/prometheus:v2.45.0
+    container_name: casper-ams-monitoring
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    networks:
+      - ams-network
+    restart: unless-stopped
+
+volumes:
+  backend_data:
+  nginx_logs:
+  prometheus_data:
+
+networks:
+  ams-network:
+    driver: bridge

@@ -1,45 +1,46 @@
 {
-  "name": "secure-backend",
+  "name": "auto-monetization-backend",
   "version": "1.0.0",
-  "main": "src/app.js",
+  "description": "Enterprise Auto-Monetization System with Quantum Computing",
+  "main": "index.js",
   "scripts": {
-    "start": "node ../server-express.js",
-    "start:dev": "node ../server-express.js",
-  "build": "docker build -t backend:zero-vuln .",
-  "test": "jest --runInBand"
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest",
+    "quantum": "node -e \"require('./quantum-integration').initialize()\"",
+    "build": "npm install && npm run quantum"
   },
   "dependencies": {
+    "@tensorflow/tfjs-node": "^4.10.0",
+    "brain.js": "^2.0.0-beta.20",
+    "cron": "^2.4.4",
+    "ioredis": "^5.3.2",
+    "kafkajs": "^2.2.4",
+    "web3": "^4.1.1",
     "express": "^4.18.2",
+    "helmet": "^7.0.0",
+    "cors": "^2.8.5",
+    "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
-    "helmet": "^7.1.0",
-  "cors": "^2.8.5",
-  "ajv": "^8.12.0"
+    "uuid": "^9.0.0",
+    "dotenv": "^16.3.1",
+    "joi": "^17.9.2",
+    "sqlite3": "^5.1.6",
+    "pg": "^8.11.3",
+    "ws": "^8.13.0",
+    "web-push": "^3.6.3",
+    "speakeasy": "^2.0.0",
+    "qrcode": "^1.5.3",
+    "crypto": "^1.0.1"
   },
   "devDependencies": {
-    "jest": "^29.6.0",
-    "supertest": "^6.3.3"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "reporters": [
-      "default",
-      [
-        "jest-junit",
-        {
-          "outputDirectory": "./reports",
-          "outputName": "junit.xml"
-        }
-      ]
-    ]
-  },
-  "jest-junit": {
-    "outputDirectory": "reports",
-    "outputName": "junit.xml"
-  },
-  "optionalDependencies": {
-    "jest-junit": "^12.0.0"
+    "nodemon": "^3.0.1",
+    "jest": "^29.6.2"
   },
   "engines": {
-    "node": ">=20.12.2"
-  }
+    "node": ">=18.0.0"
+  },
+  "keywords": ["quantum", "monetization", "ai", "automation", "enterprise"],
+  "author": "Casper Auto-Monetization Team",
+  "license": "MIT"
 }

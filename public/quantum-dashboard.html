@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantum Auto-Monetization Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0a0a0a; color: #fff; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .quantum-title { font-size: 2.5rem; background: linear-gradient(45deg, #00ffff, #ff00ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2); }
+        .quantum-status { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; }
+        .status-dot { width: 12px; height: 12px; border-radius: 50%; }
+        .status-active { background: #00ff00; animation: pulse 2s infinite; }
+        .status-inactive { background: #ff0000; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .metric { display: flex; justify-content: space-between; margin: 10px 0; }
+        .metric-value { font-weight: bold; color: #00ffff; }
+        .qpu-selector { margin: 20px 0; }
+        .qpu-selector select { background: rgba(0,0,0,0.5); color: #fff; border: 1px solid #00ffff; padding: 10px; border-radius: 5px; width: 100%; }
+        .btn { background: linear-gradient(45deg, #00ffff, #ff00ff); border: none; color: #fff; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,255,255,0.3); }
+        .income-display { font-size: 2rem; text-align: center; margin: 20px 0; }
+        .quantum-boost { color: #00ff00; font-size: 0.8rem; }
+        .log { background: rgba(0,0,0,0.5); padding: 15px; border-radius: 8px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.9rem; }
+        .optimization-chart { height: 150px; background: rgba(0,255,255,0.1); border-radius: 8px; margin: 15px 0; position: relative; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="quantum-title">🔬 Quantum Auto-Monetization System</h1>
+            <p>Enterprise-Grade Quantum Computing für maximale Einkommensoptimierung</p>
+        </div>
+
+        <div class="grid">
+            <!-- Quantum Status -->
+            <div class="card">
+                <h3>🚀 Quantum Status</h3>
+                <div class="quantum-status">
+                    <div class="status-dot" id="quantumStatusDot"></div>
+                    <span id="quantumStatusText">Initialisierung...</span>
+                </div>
+                <div class="metric">
+                    <span>QPU:</span>
+                    <span class="metric-value" id="currentQPU">-</span>
+                </div>
+                <div class="metric">
+                    <span>Letzter Lauf:</span>
+                    <span class="metric-value" id="lastRun">-</span>
+                </div>
+                <div class="metric">
+                    <span>Uptime:</span>
+                    <span class="metric-value" id="uptime">-</span>
+                </div>
+                <div class="qpu-selector">
+                    <select id="qpuSelect">
+                        <option value="ibm-falcon">IBM Falcon (27 Qubits)</option>
+                        <option value="google-sycamore">Google Sycamore (70 Qubits)</option>
+                        <option value="ionq-aria">IonQ Aria (32 Qubits)</option>
+                        <option value="dwave-advantage">D-Wave Advantage (5760 Qubits)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Income Optimization -->
+            <div class="card">
+                <h3>💰 Quantum-Optimiertes Einkommen</h3>
+                <div class="income-display">
+                    <div>€<span id="totalIncome">0</span></div>
+                    <div class="quantum-boost" id="quantumBoost">+0% Quantum Boost</div>
+                </div>
+                <button class="btn" onclick="optimizeIncome()">🔬 Quantum Optimierung starten</button>
+                <div class="optimization-chart" id="optimizationChart"></div>
+            </div>
+
+            <!-- Performance Metrics -->
+            <div class="card">
+                <h3>📊 Performance Metriken</h3>
+                <div class="metric">
+                    <span>Ausführungen:</span>
+                    <span class="metric-value" id="executions">0</span>
+                </div>
+                <div class="metric">
+                    <span>Fehler:</span>
+                    <span class="metric-value" id="errors">0</span>
+                </div>
+                <div class="metric">
+                    <span>Ø Zeit:</span>
+                    <span class="metric-value" id="avgTime">0ms</span>
+                </div>
+                <div class="metric">
+                    <span>Erfolgsrate:</span>
+                    <span class="metric-value" id="successRate">100%</span>
+                </div>
+            </div>
+
+            <!-- System Log -->
+            <div class="card">
+                <h3>📝 System Log</h3>
+                <div class="log" id="systemLog">
+                    <div>System initialisiert...</div>
+                </div>
+                <button class="btn" onclick="clearLog()">Log löschen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let quantumStatus = { enabled: false, metrics: { executions: 0, errors: 0, avgTime: 0 } };
+        
+        async function fetchQuantumStatus() {
+            try {
+                const response = await fetch('/api/quantum/status');
+                quantumStatus = await response.json();
+                updateUI();
+            } catch (error) {
+                logMessage('❌ Fehler beim Abrufen des Quantum Status: ' + error.message);
+            }
+        }
+
+        async function optimizeIncome() {
+            logMessage('🔬 Starte Quantum-Optimierung...');
+            try {
+                const incomeData = { amount: Math.random() * 10000 + 5000 };
+                const response = await fetch('/api/quantum/optimize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(incomeData)
+                });
+                const result = await response.json();
+                
+                if (result.quantum_optimized) {
+                    const boost = ((result.optimization_factor - 1) * 100).toFixed(1);
+                    document.getElementById('totalIncome').textContent = result.amount.toFixed(2);
+                    document.getElementById('quantumBoost').textContent = `+${boost}% Quantum Boost (${result.qpu_used})`;
+                    logMessage(`✅ Optimierung erfolgreich: +${boost}% Boost`);
+                } else {
+                    logMessage('⚠️ Fallback zu klassischer Berechnung');
+                }
+            } catch (error) {
+                logMessage('❌ Optimierung fehlgeschlagen: ' + error.message);
+            }
+        }
+
+        function updateUI() {
+            const statusDot = document.getElementById('quantumStatusDot');
+            const statusText = document.getElementById('quantumStatusText');
+            
+            if (quantumStatus.enabled && quantumStatus.health?.ok) {
+                statusDot.className = 'status-dot status-active';
+                statusText.textContent = 'Quantum System Aktiv';
+            } else {
+                statusDot.className = 'status-dot status-inactive';
+                statusText.textContent = 'Quantum System Inaktiv';
+            }
+
+            document.getElementById('currentQPU').textContent = quantumStatus.health?.preferred_qpu || 'Unbekannt';
+            document.getElementById('lastRun').textContent = quantumStatus.health?.lastRunAt || 'Nie';
+            document.getElementById('uptime').textContent = quantumStatus.health?.uptime ? Math.floor(quantumStatus.health.uptime) + 's' : '0s';
+            
+            document.getElementById('executions').textContent = quantumStatus.metrics?.executions || 0;
+            document.getElementById('errors').textContent = quantumStatus.metrics?.errors || 0;
+            document.getElementById('avgTime').textContent = Math.floor(quantumStatus.metrics?.avgTime || 0) + 'ms';
+            
+            const successRate = quantumStatus.metrics?.executions > 0 ? 
+                (((quantumStatus.metrics.executions - quantumStatus.metrics.errors) / quantumStatus.metrics.executions) * 100).toFixed(1) : 100;
+            document.getElementById('successRate').textContent = successRate + '%';
+        }
+
+        function logMessage(message) {
+            const log = document.getElementById('systemLog');
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('systemLog').innerHTML = '<div>Log gelöscht...</div>';
+        }
+
+        // Auto-refresh every 5 seconds
+        setInterval(fetchQuantumStatus, 5000);
+        
+        // Initial load
+        fetchQuantumStatus();
+        
+        // Simulate some activity
+        setInterval(() => {
+            if (Math.random() > 0.7) {
+                logMessage('🔄 Quantum-Scheduler läuft...');
+            }
+        }, 10000);
+    </script>
+</body>
+</html>

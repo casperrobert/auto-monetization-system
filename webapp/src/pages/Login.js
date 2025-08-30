@@ -20,6 +20,7 @@
 import React, { useState } from 'react';
 import { Container, Paper, TextField, Button, Typography, Box } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import ApiService from '../services/api';
 
 const Login = () => {
   const [credentials, setCredentials] = useState({ username: '', password: '' });
@@ -33,26 +34,14 @@ const Login = () => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(credentials)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.token) {
-          localStorage.setItem("token", data.token);
-          navigate("/");
-        } else {
-          setError("Login fehlgeschlagen: Kein Token erhalten.");
-        }
-      } else if (res.status === 401) {
-        setError("Login fehlgeschlagen: Benutzername oder Passwort falsch.");
+      const response = await ApiService.login(credentials);
+      if (response.success) {
+        navigate('/');
       } else {
-        setError("Login fehlgeschlagen. Backend erreichbar?");
+        setError(response.message || 'Login fehlgeschlagen');
       }
-    } catch (err) {
-      setError("Netzwerkfehler. Bitte Backend prüfen.");
+    } catch (error) {
+      setError('Backend nicht erreichbar. Bitte prüfen Sie die Verbindung.');
     } finally {
       setLoading(false);
     }
@@ -62,7 +51,7 @@ const Login = () => {
     <Container maxWidth="sm" sx={{ mt: 8 }}>
       <Paper elevation={3} sx={{ p: 4 }}>
         <Typography variant="h4" align="center" gutterBottom>
-          AMS Login
+          Casper-AMS Login
         </Typography>
         <Box component="form" onSubmit={handleLogin}>
           {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}

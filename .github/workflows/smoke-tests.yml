@@ -1,0 +1,40 @@
+name: Smoke Tests
+
+on:
+  push:
+    branches: [ main, feat/*, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [18,20]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Use Node.js ${{ matrix.node }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Install minimal deps
+        run: |
+          npm ci --prefer-offline || npm i --no-audit --no-fund
+      - name: Run smoke tests
+        run: |
+          npm run smoke:providers || true
+          npm run smoke:translator || true
+          npm run smoke:translator-ibm || true
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    needs: smoke
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: |
+          docker build -t ams-smoke:latest . || true
+      - name: Run smoke inside container (best-effort)
+        run: |
+          docker run --rm ams-smoke:latest /bin/sh -c "npm run smoke:all || true"

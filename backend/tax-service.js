@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const AuditService = require('./audit-service');
+const ComplianceService = require('./compliance-service');
+let SqliteAdapter;
+try { SqliteAdapter = require('./sqlite-adapter'); } catch (e) { SqliteAdapter = null; }
 
 const TAX_FILE = path.join(__dirname, 'tax-escrow.json');
 const TAX_RATES = {
@@ -15,15 +19,29 @@ const TAX_RATES = {
 };
 
 class TaxService {
-  constructor() {
+  constructor(notificationService = null) {
+  this.sqlite = SqliteAdapter ? new SqliteAdapter(path.join(process.cwd(),'data','ams.db')) : null;
     this.taxData = this.loadTaxData();
     this.finanzamtAccount = process.env.FINANZAMT_IBAN || 'DE89370400440532013000';
     this.isLocked = true; // Immer gesperrt für Benutzer
+    this.auditService = new AuditService();
+    this.complianceService = new ComplianceService();
+    this.notificationService = notificationService;
   }
 
   loadTaxData() {
     try {
+      if (this.sqlite) {
+        const payload = this.sqlite.getKV('taxData');
+        if (payload) {
+          const dec = this.decrypt(payload);
+          return dec ? JSON.parse(dec) : null;
+        }
+      }
       const data = fs.readFileSync(TAX_FILE, 'utf8');
+      // attempt decrypt first
+      const maybeDecrypted = this.decrypt(data);
+      if (maybeDecrypted) return JSON.parse(maybeDecrypted);
       return JSON.parse(data);
     } catch {
       return {
@@ -47,25 +65,47 @@ class TaxService {
   }
 
   saveTaxData() {
-    // Verschlüsselte Speicherung
-    const encrypted = this.encrypt(JSON.stringify(this.taxData));
-    fs.writeFileSync(TAX_FILE, encrypted);
+    try {
+      const payload = this.encrypt(JSON.stringify(this.taxData));
+      if (this.sqlite) {
+        this.sqlite.setKV('taxData', payload);
+        return;
+      }
+      const tmp = `${TAX_FILE}.tmp`;
+      fs.writeFileSync(tmp, payload, 'utf8');
+      fs.renameSync(tmp, TAX_FILE);
+    } catch (e) {
+      console.warn('saveTaxData failed:', e.message);
+    }
   }
 
   encrypt(text) {
     const algorithm = 'aes-256-gcm';
     const key = crypto.scryptSync(process.env.TAX_SECRET || 'tax-secret-key', 'salt', 32);
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipher(algorithm, key);
-    
+    const iv = crypto.randomBytes(12); // 96-bit recommended for GCM
+    const cipher = crypto.createCipheriv(algorithm, key, iv);
     let encrypted = cipher.update(text, 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    
-    return JSON.stringify({
-      iv: iv.toString('hex'),
-      data: encrypted,
-      tag: cipher.getAuthTag().toString('hex')
-    });
+    const tag = cipher.getAuthTag();
+    return JSON.stringify({ iv: iv.toString('hex'), data: encrypted, tag: tag.toString('hex') });
+  }
+
+  decrypt(payload) {
+    try {
+      const parsed = JSON.parse(payload);
+      const algorithm = 'aes-256-gcm';
+      const key = crypto.scryptSync(process.env.TAX_SECRET || 'tax-secret-key', 'salt', 32);
+      const iv = Buffer.from(parsed.iv, 'hex');
+      const tag = Buffer.from(parsed.tag, 'hex');
+      const decipher = crypto.createDecipheriv(algorithm, key, iv);
+      decipher.setAuthTag(tag);
+      let decrypted = decipher.update(parsed.data, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      return decrypted;
+    } catch (e) {
+      console.warn('decrypt failed:', e.message);
+      return null;
+    }
   }
 
   calculateTaxReserve(incomeData) {
@@ -92,7 +132,8 @@ class TaxService {
     };
   }
 
-  updateTaxReserves(incomeData) {
+  updateTaxReserves(incomeData, userId = 'system') {
+    const oldData = { ...this.taxData };
     const calculation = this.calculateTaxReserve(incomeData);
     const month = new Date().toISOString().substring(0, 7);
     
@@ -100,13 +141,25 @@ class TaxService {
     this.taxData.totalReserved = Object.values(this.taxData.monthlyReserved)
       .reduce((sum, data) => sum + data.totalReserve, 0);
     
+    // Audit-Log für Änderungen
+    this.auditService.logIncomeChange(oldData, this.taxData, userId);
+    
+    // Compliance-Prüfung
+    const compliance = this.complianceService.validateTaxCompliance(incomeData, calculation.reserves);
+    if (!compliance.compliant && this.notificationService) {
+      this.notificationService.notifyComplianceViolation(compliance.violations);
+    }
+    
     // Automatische Überweisung bei Schwellenwert
     if (this.taxData.totalReserved >= 1000) {
+      if (this.notificationService) {
+        this.notificationService.notifyTaxThreshold(this.taxData.totalReserved, 1000);
+      }
       this.scheduleTransferToFinanzamt();
     }
     
     this.saveTaxData();
-    return calculation;
+    return { ...calculation, compliance };
   }
 
   scheduleTransferToFinanzamt() {
@@ -140,6 +193,14 @@ class TaxService {
     if (transfer) {
       transfer.status = 'COMPLETED';
       transfer.executedDate = new Date().toISOString();
+      
+      // Audit-Log für Transfer
+      this.auditService.logTaxTransfer(transfer);
+      
+      // Benachrichtigung über Transfer
+      if (this.notificationService) {
+        this.notificationService.notifyTaxTransfer(transfer);
+      }
       
       // Reset nach Überweisung
       this.taxData.totalReserved = 0;
@@ -175,16 +236,28 @@ class TaxService {
     };
   }
 
+  getComplianceReport(incomeData) {
+    const auditTrail = this.auditService.getAuditTrail();
+    return this.complianceService.generateComplianceReport(incomeData, this.taxData, auditTrail);
+  }
+
+  getAuditTrail(limit) {
+    return this.auditService.getAuditTrail(limit);
+  }
+
   // Nur für Finanzamt-API (simuliert)
   getFinanzamtAccess(authCode) {
     if (authCode !== process.env.FINANZAMT_ACCESS_CODE) {
+      this.auditService.logUnauthorizedAccess('/api/finanzamt/data', 'unknown', 'unknown');
       throw new Error('Unauthorized: Finanzamt access only');
     }
     
     return {
       fullTaxData: this.taxData,
       transactions: this.taxData.transactions,
-      escrowBalance: this.taxData.totalReserved
+      escrowBalance: this.taxData.totalReserved,
+      auditTrail: this.auditService.getAuditTrail(1000),
+      complianceStatus: this.complianceService.validateTaxCompliance({}, this.taxData)
     };
   }
 }
