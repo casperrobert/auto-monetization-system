@@ -1,5 +1,5 @@
 {
-  "name": "ams-webapp",
+  "name": "casper-ams-webapp",
   "version": "1.0.0",
   "private": true,
   "dependencies": {

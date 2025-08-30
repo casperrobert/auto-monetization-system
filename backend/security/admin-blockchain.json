@@ -1,0 +1,14 @@
+[
+  {
+    "index": 0,
+    "timestamp": "2025-08-29T22:37:12.787Z",
+    "data": {
+      "type": "GENESIS",
+      "adminFingerprint": "4a2c165dec0896a3",
+      "immutable": true
+    },
+    "previousHash": "0",
+    "hash": "25b373102f2b87ec7ad557ebf0573e8477d6593fb76b5fabfc076247aa5ce0cf",
+    "nonce": 0
+  }
+]

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Container, Grid, Card, CardContent, Typography, Box, LinearProgress, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from '@mui/material';
-import { TrendingUp, AttachMoney, AccountBalance, YouTube, Settings, Refresh, Psychology, AdminPanelSettings } from '@mui/icons-material';
+import { TrendingUp, AttachMoney, AccountBalance, YouTube, Settings, Refresh, Psychology, AdminPanelSettings, Lock, Assignment, People } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
+import NotificationBell from '../components/NotificationBell';
+import ApiService from '../services/api';
+import WebSocketService from '../services/websocket';
+import PushNotificationService from '../services/push-notifications';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -22,32 +26,69 @@ const Dashboard = () => {
   const totalIncome = Object.values(income).reduce((sum, val) => sum + val, 0);
 
   const handleCardClick = (key, value) => {
-    setSelectedCard(key);
-    setEditValue(value);
-    setIsEditing(true);
+    navigate(`/category/${encodeURIComponent(key)}`);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (selectedCard && editValue) {
-      setIncome(prev => ({
-        ...prev,
-        [selectedCard]: parseInt(editValue) || 0
-      }));
+      try {
+        const updates = { [selectedCard]: parseInt(editValue) || 0 };
+        const updatedIncome = await ApiService.updateIncome(updates);
+        setIncome(updatedIncome);
+      } catch (error) {
+        console.error('Failed to update income:', error);
+      }
     }
     setIsEditing(false);
     setSelectedCard(null);
   };
 
-  const refreshData = () => {
-    const variations = [-50, -25, 0, 25, 50, 75, 100];
-    setIncome(prev => {
-      const newIncome = {};
-      Object.keys(prev).forEach(key => {
-        const variation = variations[Math.floor(Math.random() * variations.length)];
-        newIncome[key] = Math.max(0, prev[key] + variation);
-      });
-      return newIncome;
-    });
+  const refreshData = async () => {
+    try {
+      const data = await ApiService.simulateIncome();
+      setIncome(data);
+    } catch (error) {
+      console.error('Failed to refresh data:', error);
+    }
+  };
+
+  const loadIncomeData = async () => {
+    try {
+      const data = await ApiService.getIncome();
+      setIncome(data);
+    } catch (error) {
+      console.error('Failed to load income data:', error);
+    }
+  };
+
+  useEffect(() => {
+    loadIncomeData();
+    initializeRealTimeFeatures();
+    
+    return () => {
+      WebSocketService.disconnect();
+    };
+  }, []);
+
+  const initializeRealTimeFeatures = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        await WebSocketService.connect(token);
+        
+        // Listen for real-time income updates
+        WebSocketService.on('incomeUpdate', (data) => {
+          setIncome(data);
+        });
+        
+        // Initialize push notifications
+        if (PushNotificationService.isSupported()) {
+          await PushNotificationService.initialize();
+        }
+      }
+    } catch (error) {
+      console.error('Failed to initialize real-time features:', error);
+    }
   };
 
   const incomeCards = [
@@ -65,9 +106,10 @@ const Dashboard = () => {
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h3">
-          Auto-Monetization System
+          Casper-Auto-Monetization System
         </Typography>
-        <Box>
+        <Box display="flex" alignItems="center">
+          <NotificationBell />
           <Button
             variant="outlined"
             startIcon={<Settings />}
@@ -78,11 +120,37 @@ const Dashboard = () => {
           </Button>
           <Button
             variant="outlined"
+            startIcon={<Lock />}
+            onClick={() => navigate('/tax')}
+            sx={{ mr: 2 }}
+            color="error"
+          >
+            Steuern
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<Assignment />}
+            onClick={() => navigate('/compliance')}
+            sx={{ mr: 2 }}
+            color="warning"
+          >
+            Compliance
+          </Button>
+          <Button
+            variant="outlined"
             startIcon={<Psychology />}
             onClick={() => navigate('/ai')}
             sx={{ mr: 2 }}
           >
             KI-Integration
+          </Button>
+          <Button
+            variant="outlined"
+            startIcon={<People />}
+            onClick={() => navigate('/users')}
+            sx={{ mr: 2 }}
+          >
+            Benutzer
           </Button>
           <Button
             variant="outlined"
@@ -175,25 +243,7 @@ const Dashboard = () => {
         </CardContent>
       </Card>
 
-      <Dialog open={isEditing} onClose={() => setIsEditing(false)}>
-        <DialogTitle>Einkommen bearbeiten</DialogTitle>
-        <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Neuer Wert (€)"
-            type="number"
-            fullWidth
-            variant="outlined"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsEditing(false)}>Abbrechen</Button>
-          <Button onClick={handleSave} variant="contained">Speichern</Button>
-        </DialogActions>
-      </Dialog>
+  {/* Edit dialog removed: click a card to open detailed settings */}
     </Container>
   );
 };

@@ -1,6 +1,7 @@
 // backend/ai.js
 const express = require('express');
-const axios = require('axios');
+let axios;
+try { axios = require('axios'); } catch(e) { axios = null; }
 const router = express.Router();
 const validateSchema = require('./src/middleware/validateSchema');
 

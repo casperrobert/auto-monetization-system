@@ -6,6 +6,7 @@ const STREAMS_FILE = path.join(__dirname, 'streams.json');
 class StreamConfigService {
   constructor() {
     this.streams = this.loadStreams();
+  this.runners = {}; // track running automation per stream id
   }
 
   loadStreams() {
@@ -167,6 +168,33 @@ class StreamConfigService {
 
   getEnabledStreams() {
     return this.streams.filter(s => s.enabled);
+  }
+
+  // Start simple automation loop for a stream. This is a placeholder that
+  // marks the stream as running and stores an interval handle. Real logic
+  // should enqueue work items or call specific adapters.
+  startAutomation(id) {
+    const stream = this.getStream(id);
+    if (!stream) throw new Error('Stream not found');
+    if (this.runners[id]) return; // already running
+    stream._running = true;
+    this.saveStreams();
+    // placeholder: perform periodic tasks (e.g., trigger income simulation)
+    this.runners[id] = setInterval(() => {
+      // noop: extend with real automation hooks
+      console.debug(`[STREAM-AUTO] tick for ${id}`);
+    }, 60 * 1000);
+  }
+
+  stopAutomation(id) {
+    const stream = this.getStream(id);
+    if (!stream) throw new Error('Stream not found');
+    if (this.runners[id]) {
+      clearInterval(this.runners[id]);
+      delete this.runners[id];
+    }
+    stream._running = false;
+    this.saveStreams();
   }
 }
 

@@ -1,5 +1,13 @@
 const path = require('path');
-const Ajv = require('ajv');
+let Ajv;
+try {
+  Ajv = require('ajv');
+} catch (e) {
+  // Ajv not installed in this environment (ENOPRO or CI-limited). We'll
+  // provide a fallback validateSchema that returns 503 so the app can be
+  // imported and tests can stub or opt-in to install Ajv.
+  Ajv = null;
+}
 const fs = require('fs');
 
 const cache = new Map();
@@ -9,6 +17,7 @@ function loadSchema(schemaPath){
   if(cache.has(abs)) return cache.get(abs);
   const raw = fs.readFileSync(abs,'utf8');
   const schema = JSON.parse(raw);
+  if(!Ajv) throw new Error('AjvNotInstalled');
   const ajv = new Ajv({ allErrors: true, strict:false });
   const validate = ajv.compile(schema);
   cache.set(abs, validate);
@@ -16,6 +25,14 @@ function loadSchema(schemaPath){
 }
 
 function validateSchema(schemaFile){
+  // If Ajv isn't available, return a middleware that refuses requests with
+  // 503 so callers know validation isn't available in this environment.
+  if(!Ajv){
+    return (req,res)=>{
+      res.status(503).json({ error: 'validation unavailable: missing dependency ajv' });
+    };
+  }
+
   return (req,res,next)=>{
     try{
       const validate = loadSchema(schemaFile);
@@ -26,7 +43,7 @@ function validateSchema(schemaFile){
       }
       next();
     } catch(err){
-      console.error('schema validate error', err);
+      console.error('schema validate error', err && err.message);
       return res.status(500).json({ error:'schema load error' });
     }
   };
