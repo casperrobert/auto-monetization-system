@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node index.js",
-    "automation": "node automation.js"
+    "automation": "node automation.js",
+    "test": "node test/test-pl_helper-bridge.js",
+    "test:pl-helper": "node test/test-pl_helper-bridge.js",
+    "test:smoke": "./scripts/run-smoke-tests-local.sh",
+    "test:smoke-docker": "./scripts/run-smoke-tests-docker.sh"
   },
   "dependencies": {
     "express": "^4.19.2",
