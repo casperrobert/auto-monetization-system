@@ -1,198 +1,371 @@
-cd /workspaces/auto-monetization-system
-mkdir -p public/js
-
-# dashboard.html
-cat > public/dashboard.html <<'HTML'
 <!doctype html>
 <html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard · CASPER SYSTEM 24</title>
-  <link rel="stylesheet" href="styles.css">
-  <script src="https://unpkg.com/web3@1.10.0/dist/web3.min.js"></script>
-</head>
-<body>
-<header class="site-header">
-  <div class="container header-inner">
-    <a class="brand" href="index.html">CASPER SYSTEM 24</a>
-    <nav class="site-nav"><a href="index.html">Home</a></nav>
-  </div>
-</header>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="CASPER SYSTEM 24 - Automated Monetization Dashboard"
+    />
+    <meta
+      name="keywords"
+      content="monetization, automation, dashboard, affiliate, crypto"
+    />
+    <meta name="author" content="CASPER SYSTEM 24" />
 
-<main class="section">
-  <div class="container">
-    <h1>Realtime Dashboard</h1>
-    <p class="muted">Einstellungen werden lokal gespeichert. Backendless ist optional.</p>
+    <title>Dashboard · CASPER SYSTEM 24</title>
 
-    <div class="grid-2">
-      <section class="panel">
-        <h2>1) Einstellungen</h2>
-        <form class="cfg">
-          <label>Affiliate-Tag (Amazon)<input id="cfg-aff" placeholder="dein-tag-21"></label>
-          <label>Backendless APP_ID<input id="cfg-app" placeholder="APP_ID"></label>
-          <label>Backendless API_KEY<input id="cfg-key" placeholder="REST_API_KEY"></label>
-          <label>Log-Tabelle<input id="cfg-table" value="Transactions"></label>
-          <div class="row">
-            <button type="button" id="save-cfg" class="btn btn-primary">Speichern</button>
-            <button type="button" id="clear-cfg" class="btn btn-ghost">Löschen</button>
-          </div>
-        </form>
-      </section>
+    <!-- Security headers will be set by server -->
+    <link rel="stylesheet" href="styles.css" />
 
-      <section class="panel">
-        <h2>2) Wallet verbinden</h2>
-        <button id="btn-connect" class="btn btn-primary">Mit MetaMask verbinden</button>
-        <div id="wallet-info" class="tiny muted"></div>
-        <div class="row">
-          <label>Betrag (ETH)<input id="send-amount" type="number" step="0.0001" placeholder="0.01"></label>
-          <label>An Adresse<input id="send-to" placeholder="0xEmpfänger..."></label>
+    <!-- Web3 library with integrity check -->
+    <script
+      src="https://unpkg.com/web3@1.10.0/dist/web3.min.js"
+      integrity="sha384-nQZYKqyZXpFxnHpBJdJbKsP3tL8QGbWPQCiYpS7OlXoR8YFdNZp5rP9C1m8K7Qcw"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-link" tabindex="0"
+      >Skip to main content</a
+    >
+
+    <header class="site-header" role="banner">
+      <div class="container header-inner">
+        <a class="brand" href="index.html" aria-label="CASPER SYSTEM 24 Home">
+          CASPER SYSTEM 24
+        </a>
+        <nav class="site-nav" role="navigation" aria-label="Main navigation">
+          <a href="index.html">Home</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="section" id="main-content" role="main">
+      <div class="container">
+        <h1>Realtime Dashboard</h1>
+        <p class="muted">
+          Einstellungen werden sicher lokal gespeichert. Backendless ist
+          optional.
+        </p>
+
+        <div class="grid-2">
+          <!-- Configuration Section -->
+          <section class="panel" aria-labelledby="config-heading">
+            <h2 id="config-heading">1) Einstellungen</h2>
+            <form class="cfg" role="form" aria-label="Configuration form">
+              <div class="form-group">
+                <label for="cfg-aff"
+                  >Affiliate-Tag (Amazon)
+                  <input
+                    id="cfg-aff"
+                    type="text"
+                    placeholder="dein-tag-21"
+                    aria-describedby="aff-help"
+                    maxlength="50"
+                    autocomplete="off"
+                  />
+                </label>
+                <small id="aff-help" class="form-help"
+                  >Ihr Amazon Affiliate Tag</small
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="cfg-app"
+                  >Backendless APP_ID
+                  <input
+                    id="cfg-app"
+                    type="text"
+                    placeholder="APP_ID"
+                    aria-describedby="app-help"
+                    maxlength="100"
+                    autocomplete="off"
+                  />
+                </label>
+                <small id="app-help" class="form-help"
+                  >Backendless Application ID (optional)</small
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="cfg-key"
+                  >Backendless API_KEY
+                  <input
+                    id="cfg-key"
+                    type="password"
+                    placeholder="REST_API_KEY"
+                    aria-describedby="key-help"
+                    maxlength="200"
+                    autocomplete="off"
+                  />
+                </label>
+                <small id="key-help" class="form-help"
+                  >Backendless REST API Key (optional)</small
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="cfg-table"
+                  >Log-Tabelle
+                  <input
+                    id="cfg-table"
+                    type="text"
+                    value="Transactions"
+                    aria-describedby="table-help"
+                    maxlength="50"
+                    autocomplete="off"
+                  />
+                </label>
+                <small id="table-help" class="form-help"
+                  >Backendless table name</small
+                >
+              </div>
+
+              <div class="row">
+                <button
+                  type="button"
+                  id="save-cfg"
+                  class="btn btn-primary"
+                  aria-describedby="save-help"
+                >
+                  Speichern
+                </button>
+                <button
+                  type="button"
+                  id="clear-cfg"
+                  class="btn btn-ghost"
+                  aria-describedby="clear-help"
+                >
+                  Löschen
+                </button>
+              </div>
+              <small id="save-help" class="form-help"
+                >Einstellungen lokal speichern</small
+              >
+              <small id="clear-help" class="form-help"
+                >Alle Einstellungen löschen</small
+              >
+            </form>
+          </section>
+
+          <!-- Wallet Section -->
+          <section class="panel" aria-labelledby="wallet-heading">
+            <h2 id="wallet-heading">2) Wallet verbinden</h2>
+            <button
+              id="btn-connect"
+              class="btn btn-primary"
+              aria-describedby="connect-help"
+            >
+              Mit MetaMask verbinden
+            </button>
+            <small id="connect-help" class="form-help"
+              >MetaMask Wallet verbinden</small
+            >
+            <div id="wallet-info" class="tiny muted" aria-live="polite"></div>
+
+            <div class="row">
+              <div class="form-group">
+                <label for="send-amount"
+                  >Betrag (ETH)
+                  <input
+                    id="send-amount"
+                    type="number"
+                    step="0.0001"
+                    placeholder="0.01"
+                    min="0"
+                    max="1000"
+                    aria-describedby="amount-help"
+                  />
+                </label>
+                <small id="amount-help" class="form-help"
+                  >ETH amount to send</small
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="send-to"
+                  >An Adresse
+                  <input
+                    id="send-to"
+                    type="text"
+                    placeholder="0xEmpfänger..."
+                    pattern="^0x[a-fA-F0-9]{40}$"
+                    aria-describedby="address-help"
+                    maxlength="42"
+                  />
+                </label>
+                <small id="address-help" class="form-help"
+                  >Ethereum address (0x...)</small
+                >
+              </div>
+            </div>
+
+            <button id="btn-send" class="btn" aria-describedby="send-help">
+              Test-Transaktion senden
+            </button>
+            <small id="send-help" class="form-help"
+              >Send test transaction</small
+            >
+            <pre
+              id="tx-out"
+              class="code"
+              aria-live="polite"
+              aria-label="Transaction output"
+            ></pre>
+          </section>
+
+          <!-- Live Prices Section -->
+          <section class="panel" aria-labelledby="prices-heading">
+            <h2 id="prices-heading">3) Live-Preise</h2>
+            <div class="row">
+              <button
+                id="btn-prices"
+                class="btn"
+                aria-describedby="prices-help"
+              >
+                Aktualisieren
+              </button>
+              <span id="price-ts" class="tiny muted" aria-live="polite"></span>
+            </div>
+            <small id="prices-help" class="form-help"
+              >Cryptocurrency prices from CoinGecko</small
+            >
+
+            <div class="table-container">
+              <table class="table" id="price-table" role="table">
+                <caption class="sr-only">
+                  Cryptocurrency prices and 24h change
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Asset</th>
+                    <th scope="col">Preis (USD)</th>
+                    <th scope="col">24h %</th>
+                  </tr>
+                </thead>
+                <tbody aria-live="polite">
+                  <!-- Prices will be loaded here -->
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- Affiliate Link Generator -->
+          <section class="panel" aria-labelledby="affiliate-heading">
+            <h2 id="affiliate-heading">4) Affiliate-Link Generator</h2>
+            <div class="form-group">
+              <label for="aff-url"
+                >Amazon-Produkt-URL
+                <input
+                  id="aff-url"
+                  type="url"
+                  placeholder="https://www.amazon.de/dp/ASIN…"
+                  aria-describedby="url-help"
+                  maxlength="500"
+                />
+              </label>
+              <small id="url-help" class="form-help">Amazon product URL</small>
+            </div>
+
+            <button id="btn-build" class="btn" aria-describedby="build-help">
+              Link erzeugen
+            </button>
+            <small id="build-help" class="form-help"
+              >Generate affiliate link</small
+            >
+
+            <div class="form-group">
+              <label for="aff-out"
+                >Affiliate-Link
+                <input
+                  id="aff-out"
+                  type="text"
+                  readonly
+                  placeholder="Ergebnis erscheint hier"
+                  aria-describedby="result-help"
+                />
+              </label>
+              <small id="result-help" class="form-help"
+                >Generated affiliate link</small
+              >
+            </div>
+          </section>
+
+          <!-- Revenue Log -->
+          <section class="panel" aria-labelledby="log-heading">
+            <h2 id="log-heading">5) Einnahmen-Log</h2>
+            <div class="row">
+              <div class="form-group">
+                <label for="log-amount"
+                  >Betrag
+                  <input
+                    id="log-amount"
+                    type="number"
+                    step="0.01"
+                    placeholder="5.00"
+                    min="0"
+                    max="999999"
+                    aria-describedby="log-amount-help"
+                  />
+                </label>
+                <small id="log-amount-help" class="form-help"
+                  >Revenue amount</small
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="log-source"
+                  >Quelle
+                  <input
+                    id="log-source"
+                    type="text"
+                    placeholder="Amazon / Shoop / Crypto"
+                    aria-describedby="source-help"
+                    maxlength="50"
+                  />
+                </label>
+                <small id="source-help" class="form-help">Revenue source</small>
+              </div>
+
+              <button id="btn-log" class="btn" aria-describedby="log-help">
+                Speichern
+              </button>
+            </div>
+            <small id="log-help" class="form-help">Add revenue entry</small>
+
+            <div class="table-container">
+              <table class="table" id="log-table" role="table">
+                <caption class="sr-only">
+                  Revenue log entries
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Zeit</th>
+                    <th scope="col">Quelle</th>
+                    <th scope="col">Betrag</th>
+                  </tr>
+                </thead>
+                <tbody aria-live="polite">
+                  <!-- Log entries will be loaded here -->
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
-        <button id="btn-send" class="btn">Test-Transaktion senden</button>
-        <pre id="tx-out" class="code"></pre>
-      </section>
+      </div>
+    </main>
 
-      <section class="panel">
-        <h2>3) Live-Preise</h2>
-        <div class="row">
-          <button id="btn-prices" class="btn">Aktualisieren</button>
-          <span id="price-ts" class="tiny muted"></span>
-        </div>
-        <table class="table" id="price-table">
-          <thead><tr><th>Asset</th><th>Preis (USD)</th><th>24h %</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </section>
+    <footer class="site-footer" role="contentinfo">
+      <div class="container footer-inner">
+        © <span id="year" aria-label="Current year"></span> CASPER SYSTEM 24
+      </div>
+    </footer>
 
-      <section class="panel">
-        <h2>4) Affiliate-Link Generator</h2>
-        <label>Amazon-Produkt-URL<input id="aff-url" placeholder="https://www.amazon.de/dp/ASIN…"></label>
-        <button id="btn-build" class="btn">Link erzeugen</button>
-        <input id="aff-out" readonly placeholder="Ergebnis erscheint hier">
-      </section>
-
-      <section class="panel">
-        <h2>5) Einnahmen-Log</h2>
-        <div class="row">
-          <label>Betrag<input id="log-amount" type="number" step="0.01" placeholder="5.00"></label>
-          <label>Quelle<input id="log-source" placeholder="Amazon / Shoop / Crypto"></label>
-          <button id="btn-log" class="btn">Speichern</button>
-        </div>
-        <table class="table" id="log-table">
-          <thead><tr><th>Zeit</th><th>Quelle</th><th>Betrag</th></tr></thead>
-          <tbody></tbody>
-        </table>
-      </section>
-    </div>
-  </div>
-</main>
-
-<footer class="site-footer">
-  <div class="container footer-inner">© <span id="year"></span> CASPER SYSTEM 24</div>
-</footer>
-
-<script src="js/erc20.js"></script>
-<script src="js/dashboard.js"></script>
-</body>
+    <!-- Load JavaScript modules -->
+    <script src="js/utils.js"></script>
+    <script src="js/erc20.js"></script>
+    <script src="js/dashboard.js"></script>
+  </body>
 </html>
-HTML
-
-# js/erc20.js (Mini-ABI)
-cat > public/js/erc20.js <<'JS'
-window.CASPER_ERC20_ABI = [
-  {"constant":true,"inputs":[{"name":"owner","type":"address"}],"name":"balanceOf","outputs":[{"name":"balance","type":"uint256"}],"type":"function"},
-  {"constant":false,"inputs":[{"name":"to","type":"address"},{"name":"value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"},
-  {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"},
-  {"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"type":"function"}
-];
-JS
-
-# js/dashboard.js (Logik)
-cat > public/js/dashboard.js <<'JS'
-(function(){
-  const $=s=>document.querySelector(s);
-  const y=document.getElementById('year'); if(y) y.textContent=new Date().getFullYear();
-
-  // Config lokal speichern
-  const lsKey='casper24_cfg';
-  const cfg = JSON.parse(localStorage.getItem(lsKey) || '{"affTag":"","appId":"","apiKey":"","table":"Transactions"}');
-  const set=()=>localStorage.setItem(lsKey, JSON.stringify(cfg));
-  const val=(id)=>{const el=$(id); return el?el.value.trim():""};
-
-  const aff=$('#cfg-aff'), app=$('#cfg-app'), key=$('#cfg-key'), tab=$('#cfg-table');
-  if(aff) aff.value=cfg.affTag; if(app) app.value=cfg.appId; if(key) key.value=cfg.apiKey; if(tab) tab.value=cfg.table||'Transactions';
-  $('#save-cfg')?.addEventListener('click',()=>{ cfg.affTag=aff.value.trim(); cfg.appId=app.value.trim(); cfg.apiKey=key.value.trim(); cfg.table=tab.value.trim()||'Transactions'; set(); alert('Gespeichert.'); });
-  $('#clear-cfg')?.addEventListener('click',()=>{ localStorage.removeItem(lsKey); location.reload(); });
-
-  // Wallet
-  let web3;
-  const out = (m)=>{ const el=$('#tx-out'); if(el) el.textContent=(el.textContent+'\n'+m).trim(); };
-  $('#btn-connect')?.addEventListener('click', async()=>{
-    try{
-      if(!window.ethereum){ alert('MetaMask nicht gefunden'); return; }
-      await window.ethereum.request({method:'eth_requestAccounts'});
-      web3 = new Web3(window.ethereum);
-      const [acc] = await web3.eth.getAccounts();
-      $('#wallet-info').textContent = 'Verbunden: '+acc;
-    }catch(e){ out('Wallet-Fehler: '+e.message); }
-  });
-  $('#btn-send')?.addEventListener('click', async()=>{
-    try{
-      if(!web3){ alert('Erst Wallet verbinden'); return; }
-      const to = val('#send-to'); const eth = parseFloat(val('#send-amount'));
-      if(!/^0x[a-fA-F0-9]{40}$/.test(to)) return alert('Zieladresse prüfen');
-      if(!(eth>0)) return alert('Betrag eingeben');
-      const [from] = await web3.eth.getAccounts();
-      const value = web3.utils.toWei(String(eth),'ether');
-      const tx = await web3.eth.sendTransaction({from,to,value});
-      out('TX: '+tx.transactionHash);
-    }catch(e){ out('Senden fehlgeschlagen: '+e.message); }
-  });
-
-  // Preise (CoinGecko)
-  const loadPrices = async ()=>{
-    try{
-      const ids='bitcoin,ethereum,solana';
-      const r = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd&include_24hr_change=true`);
-      if(!r.ok) throw new Error('API '+r.status);
-      const d = await r.json();
-      const tb = document.querySelector('#price-table tbody'); if(!tb) return;
-      tb.innerHTML='';
-      [['Bitcoin','bitcoin'],['Ethereum','ethereum'],['Solana','solana']].forEach(([n,k])=>{
-        const p=d[k]; const tr=document.createElement('tr');
-        tr.innerHTML = `<td>${n}</td><td>${p.usd.toLocaleString('en-US',{maximumFractionDigits:2})}</td><td>${(p.usd_24h_change||0).toFixed(2)}%</td>`;
-        tb.appendChild(tr);
-      });
-      $('#price-ts').textContent='Aktualisiert: '+new Date().toLocaleTimeString();
-    }catch{ $('#price-ts').textContent='Preisfeed nicht erreichbar'; }
-  };
-  $('#btn-prices')?.addEventListener('click', loadPrices);
-  loadPrices();
-
-  // Affiliate-Link
-  $('#btn-build')?.addEventListener('click', ()=>{
-    const url = val('#aff-url');
-    if(!url) return alert('URL einfügen');
-    if(!cfg.affTag) return alert('Affiliate-Tag in den Einstellungen speichern');
-    try{
-      const u=new URL(url);
-      if(!u.hostname.includes('amazon.')) return alert('Keine Amazon-URL');
-      u.searchParams.set('tag', cfg.affTag);
-      $('#aff-out').value = u.toString();
-    }catch{ alert('Ungültige URL'); }
-  });
-
-  // Einnahmen-Log lokal
-  const logKey='casper24_logs';
-  const read=()=>JSON.parse(localStorage.getItem(logKey)||'[]');
-  const write=(r)=>localStorage.setItem(logKey,JSON.stringify(r));
-  const render=()=>{ const rows=read(); const tb=document.querySelector('#log-table tbody'); if(!tb) return; tb.innerHTML=''; rows.forEach(r=>{ const tr=document.createElement('tr'); tr.innerHTML=`<td>${new Date(r.ts).toLocaleString()}</td><td>${r.source}</td><td>${Number(r.amount).toFixed(2)}</td>`; tb.appendChild(tr); }); };
-  $('#btn-log')?.addEventListener('click', ()=>{
-    const a=parseFloat(val('#log-amount')); const s=val('#log-source')||'Manuell';
-    if(!(a>0)) return alert('Betrag eingeben');
-    const rows=read(); rows.unshift({ts:Date.now(),source:s,amount:a}); write(rows); render();
-    $('#log-amount').value=''; $('#log-source').value='';
-  });
-  render();
-})();
-JS

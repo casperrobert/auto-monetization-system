@@ -1,8 +1,0 @@
-cd /workspaces/auto-monetization-system
-rm -rf docs
-mkdir docs
-cp -R public/* docs/
-git add -A
-git commit -m "Publish to GitHub Pages"
-git push
-

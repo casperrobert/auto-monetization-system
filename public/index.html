@@ -1,30 +1,100 @@
-cat > public/index.html <<'HTML'
 <!doctype html>
 <html lang="de">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>CASPER SYSTEM 24 – Realtime Dashboard</title>
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-<header class="site-header">
-  <div class="container header-inner">
-    <a class="brand" href="index.html">CASPER SYSTEM 24</a>
-    <nav class="site-nav"><a href="dashboard.html">Dashboard</a></nav>
-  </div>
-</header>
-<main class="hero"><div class="container hero-inner">
-  <div class="hero-text">
-    <h1>Starte in <span class="accent">Minuten</span></h1>
-    <p class="lead">Wallet verbinden, Live-Preise, Affiliate-Links, Einnahmen-Log.</p>
-    <div class="cta-row"><a class="btn btn-primary" href="dashboard.html">Zum Dashboard</a></div>
-  </div>
-</div></main>
-<footer class="site-footer"><div class="container footer-inner">
-  © <span id="year"></span> CASPER SYSTEM 24
-</div></footer>
-<script>document.getElementById('year').textContent=new Date().getFullYear()</script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="CASPER SYSTEM 24 - Automated Monetization System with Wallet Integration"
+    />
+    <meta
+      name="keywords"
+      content="monetization, automation, dashboard, affiliate, crypto, wallet"
+    />
+    <meta name="author" content="CASPER SYSTEM 24" />
+
+    <title>CASPER SYSTEM 24 – Realtime Dashboard</title>
+
+    <link rel="stylesheet" href="styles.css" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  </head>
+  <body>
+    <!-- Skip to main content for accessibility -->
+    <a href="#main-content" class="skip-link" tabindex="0"
+      >Skip to main content</a
+    >
+
+    <header class="site-header" role="banner">
+      <div class="container header-inner">
+        <a class="brand" href="index.html" aria-label="CASPER SYSTEM 24 Home">
+          CASPER SYSTEM 24
+        </a>
+        <nav class="site-nav" role="navigation" aria-label="Main navigation">
+          <a href="dashboard.html">Dashboard</a>
+        </nav>
+      </div>
+    </header>
+
+    <main class="hero" id="main-content" role="main">
+      <div class="container hero-inner">
+        <div class="hero-text">
+          <h1>Starte in <span class="accent">Minuten</span></h1>
+          <p class="lead">
+            Automatisiertes Monetization-System mit Wallet-Integration,
+            Live-Preisen, Affiliate-Links und Einnahmen-Tracking.
+          </p>
+
+          <div class="features-list">
+            <ul style="list-style: none; padding: 0; margin: 2rem 0">
+              <li style="margin: 0.5rem 0">✅ MetaMask Wallet Integration</li>
+              <li style="margin: 0.5rem 0">📊 Live Cryptocurrency Prices</li>
+              <li style="margin: 0.5rem 0">
+                🔗 Amazon Affiliate Link Generator
+              </li>
+              <li style="margin: 0.5rem 0">💰 Revenue Tracking & Analytics</li>
+              <li style="margin: 0.5rem 0">🔒 Secure Local Storage</li>
+              <li style="margin: 0.5rem 0">📱 Responsive Design</li>
+            </ul>
+          </div>
+
+          <div class="cta-row">
+            <a
+              class="btn btn-primary"
+              href="dashboard.html"
+              aria-describedby="dashboard-description"
+            >
+              Zum Dashboard
+            </a>
+            <p
+              id="dashboard-description"
+              class="muted"
+              style="margin-top: 1rem"
+            >
+              Kostenlos und ohne Registrierung nutzbar
+            </p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="site-footer" role="contentinfo">
+      <div class="container footer-inner">
+        © <span id="year" aria-label="Current year"></span> CASPER SYSTEM 24 -
+        Built with security and accessibility in mind
+      </div>
+    </footer>
+
+    <script src="js/utils.js"></script>
+    <script>
+      // Set current year
+      document.addEventListener('DOMContentLoaded', function () {
+        const yearElement = document.getElementById('year');
+        if (yearElement) {
+          yearElement.textContent = new Date().getFullYear();
+        }
+      });
+    </script>
+  </body>
 </html>
-HTML

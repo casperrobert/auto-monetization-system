@@ -3,15 +3,59 @@
   "version": "1.0.0",
   "private": true,
   "type": "commonjs",
+  "description": "Automated monetization system with security, performance, and accessibility features",
+  "keywords": [
+    "monetization",
+    "automation",
+    "security",
+    "accessibility",
+    "performance"
+  ],
+  "author": "CASPER SYSTEM 24",
+  "license": "MIT",
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js",
-    "automation": "node automation.js"
+    "dev": "nodemon index.js",
+    "automation": "node automation.js",
+    "lint": "eslint *.js public/js/*.js",
+    "lint:fix": "eslint *.js public/js/*.js --fix",
+    "format": "prettier --write *.js public/js/*.js public/*.html",
+    "format:check": "prettier --check *.js public/js/*.js public/*.html",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "validate": "npm run lint && npm run format:check",
+    "prestart": "npm run validate",
+    "security-check": "npm audit",
+    "clean": "rm -rf logs/*.log"
   },
   "dependencies": {
+    "compression": "^1.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.0.1",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1",
     "node-cron": "^3.0.3",
     "node-fetch": "^2.6.7",
-    "dotenv": "^16.3.1"
-  }
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.34.0",
+    "eslint": "^9.34.0",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.6.2"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/casperrobert/auto-monetization-system.git"
+  },
+  "bugs": {
+    "url": "https://github.com/casperrobert/auto-monetization-system/issues"
+  },
+  "homepage": "https://github.com/casperrobert/auto-monetization-system#readme"
 }
