@@ -75,10 +75,12 @@ Enterprise-Grade Auto-Monetization Platform mit Quantum Computing Integration
 - **Real-time Analytics**: Live-Dashboard mit Einkommensüberwachung
 
 ### 🔬 Quantum Computing
-- **Multi-QPU Support**: IBM Falcon, Google Sycamore, IonQ Aria, D-Wave Advantage
-- **QUBO Optimization**: Automatische Problemkonvertierung für Quantum-Hardware
-- **Noise Mitigation**: Erweiterte Fehlerkorrektur für jeden QPU-Typ
-- **Fallback System**: Graceful Degradation zu klassischen Algorithmen
+- **Multi-Provider Support**: IBM Quantum, AWS Braket (D-Wave), PennyLane, External HTTP
+- **QUBO→Ising→Circuit Translation**: Automatic problem conversion for quantum hardware
+- **Error Mitigation**: Zero-Noise Extrapolation (ZNE), measurement error correction
+- **Emitters**: OpenQASM (Qiskit), Braket JSON, PennyLane JSON output
+- **Fallback System**: Graceful degradation to classical simulators when hardware unavailable
+- **Python Bridge**: PennyLane integration via JSON bridge helper
 
 ### 🛡️ Enterprise Security
 - **Blockchain Authentication**: Unbreakable Admin-Zugang
@@ -140,6 +142,17 @@ QUANTUM_INTERVAL=*/30 * * * * *
 # Sicherheit
 QUANTUM_ENCRYPTION_KEY=your_32_char_encryption_key_here
 QUANTUM_API_KEY=your_quantum_api_key
+
+# Provider-specific API keys
+IBM_QUANTUM_TOKEN=your_ibm_quantum_token
+AWS_ACCESS_KEY_ID=your_aws_access_key  # for D-Wave/Braket
+AWS_SECRET_ACCESS_KEY=your_aws_secret_key
+EXT_PROVIDER_URL=https://your-quantum-gateway.com/api
+EXT_PROVIDER_API_KEY=your_external_api_key
+
+# PennyLane bridge
+PL_HELPER=/path/to/backend/quantum/pl_helper.py
+PL_DEVICE=default.qubit  # or lightning.qubit, qiskit.aer, etc.
 ```
 
 ### Datenbank
@@ -158,6 +171,9 @@ REDIS_PASSWORD=your_redis_password
 ### Quantum Computing
 - `GET /api/quantum/status` - Quantum System Status
 - `POST /api/quantum/optimize` - Einkommensoptimierung
+- `POST /api/quantum/translate` - QUBO to Circuit Translation
+- `POST /api/quantum/providers/submit` - Submit quantum job to provider
+- `GET /api/quantum/providers/list` - List available quantum providers
 
 ### Income Management
 - `GET /api/income` - Aktuelles Einkommen
@@ -225,12 +241,24 @@ REDIS_PASSWORD=your_redis_password
 ### Tests ausführen
 ```bash
 cd backend
-npm test
+npm test  # runs all smoke tests
+
+# Individual smoke tests
+npm run smoke:providers    # test all quantum providers with simulator fallback
+npm run smoke:translator   # test QUBO->Ising->Circuit conversion and mitigations
+npm run smoke:translator-ibm  # test IBM-specific translation
 ```
 
 ### Quantum System testen
 ```bash
-npm run quantum
+# Test PennyLane bridge (requires Python setup)
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+pip install -r backend/quantum/requirements.txt
+node test/test-pennylane-helper.js
+
+# Run full smoke test suite
+npm run smoke:all
 ```
 
 ### Logs anzeigen

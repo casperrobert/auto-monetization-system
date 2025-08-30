@@ -6,6 +6,7 @@
   "scripts": {
   "start": "node server-express.js",
   "dev": "node index.js",
+  "test": "npm run smoke:all",
   "overview": "node overview.js",
   "smoke:providers": "node test/test-providers-smoke.js",
   "smoke:translator": "node test/test-quantum-translator.js",

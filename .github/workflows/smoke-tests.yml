@@ -2,9 +2,9 @@ name: Smoke Tests
 
 on:
   push:
-    branches: [ feat/streams-validation-tests ]
+    branches: [ main, feat/*, develop ]
   pull_request:
-    branches: [ feat/streams-validation-tests ]
+    branches: [ main, develop ]
 
 jobs:
   smoke:
