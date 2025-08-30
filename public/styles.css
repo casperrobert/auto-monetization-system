@@ -1,4 +1,4 @@
-:root{--bg:#0b0c10;--text:#e8eaf1;--muted:#a5afc7;--brand:#4da3ff;--brand2:#64fbd2;--line:#ffffff22}
+:root{--bg:#0b0c10;--text:#e8eaf1;--muted:#a5afc7;--brand:#4da3ff;--brand2:#64fbd2;--line:#ffffff22;--success:#22c55e;--danger:#ef4444}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
 .container{width:min(1100px,92%);margin-inline:auto}
@@ -10,6 +10,51 @@ body{margin:0;background:var(--bg);color:var(--text);font:16px/1.6 system-ui,-ap
 .hero-inner{display:grid;gap:1.5rem}
 .hero .lead{color:var(--muted)}
 .accent{background:linear-gradient(135deg,var(--brand),var(--brand2));-webkit-background-clip:text;background-clip:text;color:transparent}
-.btn{display:inline-block;padding:.8rem 1rem;border:1px solid var(--line);border-radius:.7rem;color:var(--text);text-decoration:none}
+.btn{display:inline-block;padding:.8rem 1rem;border:1px solid var(--line);border-radius:.7rem;color:var(--text);text-decoration:none;cursor:pointer;background:transparent}
+.btn:hover{background:rgba(255,255,255,0.05)}
 .btn-primary{font-weight:700;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#061020;border:0}
+.btn-ghost{background:transparent;color:var(--muted)}
+.btn-ghost:hover{background:rgba(239,68,68,0.1);color:var(--danger)}
+.btn-danger{background:var(--danger);color:white;border:0}
+.btn-sm{padding:.4rem .6rem;font-size:.875rem}
 .site-footer{padding:2rem 0;border-top:1px solid var(--line)}
+
+/* Layout */
+.section{padding:2rem 0}
+.grid-2{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:1.5rem}
+.grid-3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1rem}
+.row{display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+.panel{background:rgba(255,255,255,0.03);border:1px solid var(--line);border-radius:.7rem;padding:1.5rem}
+.panel h2{margin-top:0;color:var(--brand)}
+.panel h3{color:var(--text);margin:1.5rem 0 1rem}
+
+/* Forms */
+input,select,textarea{background:rgba(255,255,255,0.05);border:1px solid var(--line);border-radius:.5rem;padding:.6rem;color:var(--text);width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--brand)}
+label{display:block;margin-bottom:.5rem;color:var(--muted);font-size:.875rem}
+.cfg label{margin-bottom:1rem}
+
+/* Tables */
+.table{width:100%;border-collapse:collapse;margin-top:1rem}
+.table th,.table td{padding:.6rem;text-align:left;border-bottom:1px solid var(--line)}
+.table th{color:var(--brand);font-weight:600}
+.table tbody tr:hover{background:rgba(255,255,255,0.02)}
+
+/* P&L Specific Styles */
+.stat-card{text-align:center;padding:1rem;background:rgba(255,255,255,0.02);border-radius:.5rem;border:1px solid var(--line)}
+.stat-card h4{margin:0 0 .5rem;color:var(--muted);font-size:.875rem;font-weight:500}
+.stat-value{font-size:1.5rem;font-weight:700}
+.stat-value.profit{color:var(--success)}
+.stat-value.loss{color:var(--danger)}
+
+.profit{color:var(--success)}
+.loss{color:var(--danger)}
+
+.badge{padding:.2rem .5rem;border-radius:.3rem;font-size:.75rem;font-weight:600}
+.badge.buy{background:rgba(34,197,94,0.2);color:var(--success)}
+.badge.sell{background:rgba(239,68,68,0.2);color:var(--danger)}
+
+.pl-entry,.pl-summary,.pl-transactions,.portfolio-holdings{margin-bottom:2rem}
+.code{background:rgba(255,255,255,0.05);padding:1rem;border-radius:.5rem;font-family:monospace;font-size:.875rem}
+.tiny{font-size:.75rem}
+.muted{color:var(--muted)}
