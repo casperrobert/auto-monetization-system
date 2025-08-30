@@ -4,13 +4,13 @@
   "description": "Ein Dashboard für Auto-Monetization mit Courses, Dropshipping und Dividends",
   "main": "index.js",
   "scripts": {
-  "start": "node server-express.js",
-  "dev": "node index.js",
+  "start": "node -r ./safe-fs-init.js server-express.js",
+  "dev": "node -r ./safe-fs-init.js index.js",
   "test": "npm run smoke:all",
-  "overview": "node overview.js",
-  "smoke:providers": "node test/test-providers-smoke.js",
-  "smoke:translator": "node test/test-quantum-translator.js",
-  "smoke:translator-ibm": "node test/test-translator-to-ibm.js",
+  "overview": "node -r ./safe-fs-init.js overview.js",
+  "smoke:providers": "node -r ./safe-fs-init.js test/test-providers-smoke.js",
+  "smoke:translator": "node -r ./safe-fs-init.js test/test-quantum-translator.js",
+  "smoke:translator-ibm": "node -r ./safe-fs-init.js test/test-translator-to-ibm.js",
   "smoke:all": "npm run smoke:providers && npm run smoke:translator && npm run smoke:translator-ibm"
   },
   "docker": {

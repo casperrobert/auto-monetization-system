@@ -11,6 +11,23 @@ BASE=${3:-main}
 
 echo "Creating branch $BRANCH from $BASE"
 
+# Detect likely Codespaces "no filesystem provider" situations by attempting a small git operation
+if [ -n "${CODESPACES:-}" ] || [ -e "/.codespaces" ]; then
+  # Try a harmless git status to detect underlying filesystem problems
+  set +e
+  git status -s >/dev/null 2>&1
+  GIT_STATUS_EXIT=$?
+  set -e
+  if [ "$GIT_STATUS_EXIT" -ne 0 ]; then
+    cat <<EOF
+Codespaces filesystem appears restricted (git operations failing).
+This environment may report "ENOPRO: no filesystem provider" and cannot perform git push or create PRs.
+Please run this script locally or in a full Git environment. Alternatively push your branch manually from a non-restricted environment.
+EOF
+    exit 2
+  fi
+fi
+
 git fetch origin ${BASE}
 
 git checkout -b ${BRANCH}
